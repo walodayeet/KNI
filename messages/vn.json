@@ -1,0 +1,335 @@
+{
+  "HomePage": {
+    "home": "Trang Chủ",
+    "consultation": "Tư Vấn Miễn Phí + Học Thử",
+    "freeTest": "Đề TestAS FREE",
+    "contact": "Liên Hệ",
+    "dashboard": "Bảng Điều Khiển",
+    "signup": "Đăng Ký Học Thử",
+    "heroTitle": "Chuyên gia dạy. Lộ trình hay.",
+    "heroSubtitle": "Sợ rớt TestAS, lo lỡ hẹn nước Đức? Đồng hành ngay với trung tâm đã giúp 95% học viên đậu—2 năm dẫn đầu chất lượng và tài liệu tại Việt Nam!",
+    "enrollNow": "Đăng Ký Ngay",
+    "exploreCourses": "Khám Phá Khóa Học",
+    "stats": {
+      "studentsTrained": "Số Lượng Học Viên",
+      "startupsLaunched": "Tỉ Lệ Đậu",
+      "yearsExperience": "Năm Kinh Nghiệm",
+      "mentorsAvailable": "Bộ đề mới"
+    },
+    "switchLocale": "",
+    "whatIsTestAS": {
+      "label": "Chuẩn Bị Thông Minh",
+      "title": "Vì sao chọn KNI?",
+      "subtitle": "Chìa khóa để mở cánh cửa đại học mơ ước của bạn với sự tự tin",
+      "features": {
+        "crucial": {
+          "title": "Quan Trọng Để Thành Công",
+          "description": "TestAS là yếu tố cần thiết để đảm bảo bạn được nhận vào trường đại học mơ ước."
+        },
+        "difficulty": {
+          "title": "Độ Khó Bất Ngờ",
+          "description": "90% thí sinh nhận ra TestAS khó hơn nhiều so với dự kiến khi vào phòng thi."
+        },
+        "sample": {
+          "title": "Mẫu So Với Thực Tế",
+          "description": "Các câu hỏi mẫu chính thức quá dễ so với bài thi TestAS thực tế."
+        },
+        "trusted": {
+          "title": "Tin Tưởng Bởi Học Sinh Giỏi",
+          "description": "KNI đã hướng dẫn thành công các học sinh có điểm trung bình 9.5 và IELTS 7.0–8.0."
+        },
+        "preparation": {
+          "title": "Chuẩn Bị Là Chìa Khóa",
+          "description": "Đừng đối mặt với kỳ thi thay đổi cuộc đời mà không chuẩn bị—học tập đúng cách tạo nên sự khác biệt."
+        },
+        "competition": {
+          "title": "Vượt Qua Đối Thủ",
+          "description": "Chuẩn bị tận tâm với KNI giúp bạn vượt qua người khác và nắm bắt cơ hội hàng đầu."
+        }
+      },
+      "tags": {
+        "expertGuidance": "Hướng Dẫn Chuyên Gia",
+        "provenResults": "Kết Quả Đã Được Chứng Minh",
+        "studentSuccess": "Thành Công Của Học Sinh"
+      }
+    },
+    "preparation": {
+      "label": "Hướng Dẫn Chuẩn Bị",
+      "title": "Vậy bạn sẽ chuẩn bị cho TestAS như thế nào?",
+      "sections": {
+        "0": {
+          "title": "Tự ôn luyện",
+          "description_1": "Cũng được đó, nếu nhiên bạn đã có IELTS 7.5 hoặc tiếng Đức C1.",
+          "description_2": "Bạn có kiến thức và từ vựng chuyên ngành bằng tiếng Anh hoặc Đức chứ không chỉ học ngôn ngữ phổ thông.",
+          "description_3": "Bạn không phải cân bằng thời gian cho các môn học khác.",
+          "description_4": "Bạn có dư dả cơ hội để thi đi lại TestAS nhiều lần."
+        },
+        "1": {
+          "title": "Lấy tài liệu trên mạng",
+          "description_1": "Bạn tìm thấy cuốn Preparation for TestAS và bạn nghĩ đó là câu trả lời cho tất cả?",
+          "description_2": "Để cho bạn thấy, nếu bạn mua được cuốn từ 2017 đến cuốn 2025, nội dung của nó 99% giữ nguyên. Họ chỉ đổi số năm để tránh việc bị cướp bản quyền thôi.",
+          "description_3": "Cho dù bạn đã thuộc nằm lòng từng chữ một trong cuốn sách đó... Bạn sẽ sớm nhận ra nó khác bài thi thật như thế nào."
+        },
+        "2": {
+          "title": "Học trung tâm Tư vấn du học?",
+          "description_1": "Ý bạn là nơi họ dạy bạn lại những gì có trong sách Preparation for TestAS?",
+          "description_2": "Nếu bạn cần du học thì bạn tìm một chuyên gia tư vấn du học.",
+          "description_3": "Còn nếu bạn cần điểm TestAS cao thì bạn sẽ cần một chuyên gia về TestAS."
+        }
+      },
+      "buttons": {
+        "caseStudy": "Nghiên cứu điển hình",
+        "bookACall": "Đặt lịch gọi"
+      }
+    },
+    "tutor": {
+      "label": "Từ năm 2024",
+      "title": "Người đồng hành cùng bạn",
+      "subheading": "Hello, mình tên là Nhật",
+      "description": {
+        "item1": "Cựu sinh viên VGU MEN khóa 18-22",
+        "item2": "4 năm học bổng liên tiếp (50-50-100-50%)",
+        "item3": "Kỹ sư robot ABB",
+        "item4": "TestAS: 125/130",
+        "item5": "2 năm dạy TestAS – tỉ lệ đậu 95%"
+      },
+      "quote": "Mình tin rằng giáo dục tại Đức là cơ hội tốt nhất cho sự nghiệp sau này của sinh viên Việt Nam vì chất lượng mang tính toàn cầu và học phí gần như không. Chính vì thế mình có gắng đem lại cơ hội tốt nhất đến những bạn trẻ quyết tâm nhất với mục tiêu này.",
+      "signature": {
+        "name": "Nhật, Người hướng dẫn của bạn"
+      }
+    },
+    "roadmap": {
+      "label": "Quy trình của chúng tôi",
+      "title": "Lộ trình học với KNI như thế nào?",
+      "description": "Chúng tôi hướng dẫn bạn từng bước để chuẩn bị cho TestAS với lộ trình rõ ràng và hiệu quả, đảm bảo bạn đạt được mục tiêu một cách nhanh chóng.",
+      "steps": {
+        "0": {
+          "title": "Mẹo và Bí quyết",
+          "description": "Tắt cả mẹo và bị quyết giải để nhanh và đơn giản."
+        },
+        "1": {
+          "title": "Kiến thức chuyên ngành",
+          "description": "Tổng thể kiến thức chuyên ngành và chủ đề trọng điểm"
+        },
+        "2": {
+          "title": "Tiếng Anh chuyên ngành",
+          "description": "Từ vựng tiếng Anh chuyên ngành của tất cả các phần."
+        },
+        "3": {
+          "title": "Đề thi gần nhất",
+          "description": "Đề thi được cập nhật liên tục từ các đợt thi gần nhất."
+        }
+      }
+    },
+    "customerReviews": {
+      "title": "Sự hài lòng của học viên"
+    },
+    "cta": {
+      "contact": "Liên hệ để được tư vấn + học thử miễn phí",
+      "registerNow": "Đăng ký ngay"
+    }
+  },
+  "Consultation": {
+    "label": "Liên hệ",
+    "title": "Tư vấn + Học thử",
+    "free": "miễn phí",
+    "description": {
+      "line1": "Bạn muốn biết tất cả thông tin về TestAS, VGU hay du học Đức cho hành trình sắp tới của bạn?",
+      "line2": "Hay bạn muốn trải nghiệm thử một lớp KNI?",
+      "line3": "Điền đơn sau và chúng mình sẽ liên hệ lại với bạn trong vòng 48 tiếng.",
+      "line4": "Không bắt buộc, không chi phí."
+    }
+  },
+  "FreeTestAS": {
+    "label": "Nhận đề miễn phí",
+    "title": "Đề TestAS miễn phí",
+    "quote": "Em không ngờ là bài thi TestAS khó như vậy - 99% người thi TestAS",
+    "description": {
+      "line1": "Dùng đề sư thửc chuyên bị là nguy hiểm bạn không được vào nào trước mơ ước của mình.",
+      "line2": "Bộ đề Core Test này cho bạn biết những gì căn chuẩn bị cho kỳ thi TestAS. Tham chi bạn được tăng kèm bộ Digital Core Test để bạn lựa chọn hình thức thi phù hợp với bạn nhất."
+    },
+    "form": {
+      "email": "Email",
+      "zalo": "Zalo (số điện thoại)",
+      "submit": "Gửi mình bộ đề ngay!"
+    }
+  },
+  "Contact": {
+    "title": "Liên hệ với chúng mình",
+    "items": {
+      "0": {
+        "label": "Trụ sở chính",
+        "value": "KNI Education"
+      },
+      "1": {
+        "label": "Số điện thoại",
+        "value": "+84 091-839-1099"
+      },
+      "2": {
+        "label": "Địa chỉ Email",
+        "value": "nhat@kni.vn"
+      },
+      "3": {
+        "label": "Vị trí",
+        "value": "Thành phố Hồ Chí Minh, Việt Nam"
+      }
+    },
+    "SocialMedia": "Mạng xã hội"
+  },
+  "ThankYou": {
+    "title": "Cảm ơn bạn",
+    "subtitle": "Bộ đề miễn phí sẽ đến email của bạn trong vòng 5 phút.",
+    "checkSpam": "KIỂM TRA MỤC THƯ RÁC nếu bạn không tìm thấy nó sau thời gian trên.",
+    "freeVideoTitle": "Muốn được học thử miễn phí?",
+    "freeVideoDescription": "Có thể sau khi giải xong đề bạn sẽ muốn được biết kết quả của bạn có đủ khá năng đạt điểm bạn mong muốn trong bài thi thật hay không? Hay bạn sẽ muốn được phân tích điểm mạnh và điểm yếu qua bài thi bởi người có kinh nghiệm để bạn có lộ trình tự học hợp lý?",
+    "contactPrompt": "Hãy đăng ký ngay và chúng mình sẽ Alo tư vấn trực tiếp miễn phí cho bạn!",
+    "registerNow": "Đăng Ký Ngay"
+  },
+  "ThankYouFreeConsult": {
+    "title": "Cảm ơn nhé",
+    "subtitle_1": "Giáo viên của bọn mình sẽ liên hệ với bạn qua điện thoại trong vòng 48 tiếng.",
+    "subtitle_2": "Trong lúc đó bạn, có thể đọc qua các bài blog của bọn mình để có thêm nhiều tips và tricks về học tập ở Đức!"
+  },
+  "brevoForm": {
+    "errorMessage": "Mời bạn thử lại!",
+    "successMessage": "Check email của bạn để bắt đầu thôi!",
+    "title": "Preparation for TestAS 2025",
+    "freeLabel": "(FREE)",
+    "description": "Bạn cần bộ sách cập nhật mới nhất để bắt đầu hành trình tự học của bạn mà không cần trả phí? Hãy để lại thông tin và bộ sách Core Test + Module sẽ tới trong tích tắc!",
+    "emailLabel": "Nhập EMAIL (nơi nhận bộ đề)",
+    "emailHelpText": "Provide your email address to subscribe. For e.g abc@xyz.com",
+    "zaloLabel": "Nhập Zalo (giáo viên sẽ kết nối và trả lời mọi thắc mắc của bạn)",
+    "zaloTooltip": "Zalo phải từ 6 đến 19 chữ số và bao gồm mã quốc gia (ví dụ: 849xxxxxxxx cho Việt Nam)",
+    "zaloHelpText": "Lưu ý nhập đúng sdt để được giáo viên tư vấn cho bạn nha.",
+    "moduleLabel": "Bộ sách Module bạn cần là:",
+    "moduleOptions": {
+      "engineer": "ENGINEER",
+      "economics": "ECONOMICS",
+      "naturalScience": "NATURAL SCIENCE AND COMPUTER SCIENCE"
+    },
+    "submitButton": "GỬI MÌNH ĐỀ NGAY!",
+    "requiredCodeError": "Vui lòng chọn mã quốc gia",
+    "invalidMessage": "Điền thông tin hợp lệ nha!",
+    "requiredError": "Bạn ơi điền mình đầy đủ nha!"
+  },
+  "ConsultationBrevoForm": {
+    "nameLabel": "TÊN",
+    "emailLabel": "EMAIL",
+    "zaloLabel": "ZALO (lưu ý lời mời từ giáo viên)",
+    "zaloTooltip": "The SMS field must contain between 6 and 19 digits and include the country code without using +/0 (e.g. 1xxxxxxxxxx for the United States)",
+    "searchLabel": "Bạn tìm được chúng mình qua đâu?",
+    "searchOptions": {
+      "referred": "Được giới thiệu từ người quen"
+    },
+    "submitButton": "ĐĂNG KÝ!",
+    "errorMessage": "Có lỗi. Xin thử lại!",
+    "successMessage": "Đăng ký thành công, nhớ check Zalo của bạn nhé!",
+    "requiredCodeError": "Please choose a country code",
+    "invalidMessage": "Thông tin không hợp lệ, vui lòng điền lại!",
+    "requiredError": "Đừng bỏ trống tui :(",
+    "zaloHelpText": "Lưu ý nhập đúng sdt để được giáo viên tư vấn cho bạn nha.",
+    "form": {
+      "name": "Họ Tên *",
+      "zalo": "Zalo *",
+      "email": "Email *",
+      "howDidYouFindUs": "Bạn tìm được chúng mình qua đâu? *",
+      "submit": "Gửi ngay"
+    }
+  },
+  "login": {
+    "title": "Đăng Nhập",
+    "subtitle": "Chào mừng bạn trở lại! Vui lòng đăng nhập vào tài khoản của bạn.",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "submit": "Đăng Nhập",
+    "switchToRegister": "Chưa có tài khoản? Đăng ký",
+    "forgotPassword": "Quên mật khẩu?",
+    "orContinueWith": "Hoặc tiếp tục với",
+    "signInWithGoogle": "Đăng nhập với Google",
+    "signInWithGitHub": "Đăng nhập với GitHub",
+    "loading": "Đang tải..."
+  },
+  "register": {
+    "title": "Đăng Ký",
+    "subtitle": "Tạo tài khoản của bạn để bắt đầu.",
+    "name": "Họ và Tên",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "submit": "Đăng Ký",
+    "switchToLogin": "Đã có tài khoản? Đăng nhập"
+  },
+  "Dashboard": {
+    "title": "Bảng Điều Khiển",
+    "welcome": {
+      "title": "Chào mừng trở lại, {name}!",
+      "subtitle": "Sẵn sàng tiếp tục chuẩn bị TestAS?",
+      "defaultName": "Bạn",
+      "premiumMember": "✨ Thành viên Premium",
+      "freeMember": "🎯 Thành viên Miễn phí",
+      "dayStreak": "ngày liên tiếp"
+    },
+    "stats": {
+      "testsCompleted": "Bài Thi Đã Hoàn Thành",
+      "keepGoing": "Tiếp tục phát huy!",
+      "averageScore": "Điểm Trung Bình",
+      "excellentProgress": "Tiến bộ xuất sắc!",
+      "bestScore": "Điểm Cao Nhất",
+      "amazingAchievement": "Thành tích tuyệt vời!"
+    },
+    "quickActions": {
+      "title": "Hành Động Nhanh",
+      "takeTest": "Làm Bài Thi",
+      "viewResults": "Xem Kết Quả",
+      "studyMaterials": "Tài Liệu Học Tập",
+      "settings": "Cài Đặt"
+    },
+    "availableTests": {
+      "title": "Bài Thi Có Sẵn",
+      "subtitle": "Chọn một bài thi để luyện tập và cải thiện kỹ năng TestAS của bạn",
+      "noTests": "Hiện tại không có bài thi nào.",
+      "checkBack": "Hãy quay lại sau để có thêm bài thi mới!",
+      "difficulty": {
+        "easy": "Dễ",
+        "medium": "Trung bình",
+        "hard": "Khó"
+      },
+      "duration": "phút",
+      "questions": "câu hỏi",
+      "startTest": "Bắt Đầu Thi"
+    },
+    "recentActivity": {
+      "title": "Hoạt Động Gần Đây",
+      "noActivity": "Chưa có hoạt động nào.",
+      "completedOn": "Hoàn thành vào",
+      "score": "Điểm"
+    },
+    "recommendations": {
+      "title": "Đề Xuất Cho Bạn",
+      "noRecommendations": "Không có đề xuất nào.",
+      "priority": {
+        "high": "Cao",
+        "medium": "Trung bình",
+        "low": "Thấp"
+      },
+      "dueDate": "Hạn chót",
+      "markComplete": "Đánh dấu hoàn thành"
+    },
+    "weeklyAssignments": {
+      "title": "Bài Tập Hàng Tuần",
+      "noAssignments": "Không có bài tập nào.",
+      "progress": "Tiến độ",
+      "completed": "Đã hoàn thành",
+      "dueDate": "Hạn chót"
+    },
+    "navigation": {
+       "dashboard": "Bảng Điều Khiển",
+       "resources": "Tài Liệu",
+       "mockTest": "Thi Thử",
+       "myResults": "Kết Quả Của Tôi",
+       "helpSupport": "Trợ Giúp & Hỗ Trợ",
+       "settings": "Cài Đặt",
+       "activateCourse": "Kích Hoạt Khóa Học",
+       "logout": "Đăng Xuất"
+     }
+  }
+}

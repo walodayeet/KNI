@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const locales = ["en", "vn"];
+  const pages = ["", "/free-testas"];
+
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.sitemaps.org/schemas/sitemap-image/1.1">
+      ${locales
+        .map((locale) =>
+          pages
+            .map((page) => {
+              const url = `https://yourwebsite.com/${locale}${page}`;
+              return `
+                <url>
+                  <loc>${url}</loc>
+                  ${
+                    page === ""
+                      ? `
+                    <image:image>
+                      <image:loc>https://yourwebsite.com/images/hero-image.jpg</image:loc>
+                      <image:title>KNI Education Hero Image</image:title>
+                    </image:image>
+                  `
+                      : page === "/free-testas"
+                      ? `
+                    <image:image>
+                      <image:loc>https://yourwebsite.com/images/free-testas-image.jpg</image:loc>
+                      <image:title>Free TestAS Practice Image</image:title>
+                    </image:image>
+                  `
+                      : ""
+                  }
+                </url>
+              `;
+            })
+            .join("")
+        )
+        .join("")}
+    </urlset>`;
+
+  return new NextResponse(sitemap, {
+    headers: {
+      "Content-Type": "application/xml",
+    },
+  });
+}

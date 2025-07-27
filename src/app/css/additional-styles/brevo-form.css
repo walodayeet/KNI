@@ -1,0 +1,130 @@
+/* styles/brevo-form.css */
+/* Using system Inter font instead of external Brevo fonts to avoid loading errors */
+
+/* Block external font loading from assets.brevo.com */
+@font-face {
+  font-family: 'Inter';
+  src: url('data:,') format('woff2'), url('data:,') format('woff'), local('Inter'), local('system-ui');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-10FFFF;
+}
+
+/* Block specific Brevo font URLs */
+@font-face {
+  font-family: 'Inter';
+  src: url('data:,');
+  font-weight: normal;
+  font-style: normal;
+  unicode-range: U+0000-10FFFF;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('data:,');
+  font-weight: 500;
+  font-style: normal;
+  unicode-range: U+0000-10FFFF;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('data:,');
+  font-weight: 700;
+  font-style: normal;
+  unicode-range: U+0000-10FFFF;
+}
+
+/* Additional font blocking for specific weights */
+@font-face {
+  font-family: 'Inter';
+  src: url('data:,') format('woff2'), url('data:,') format('woff'), local('Inter'), local('system-ui');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('data:,') format('woff2'), url('data:,') format('woff'), local('Inter'), local('system-ui');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('data:,') format('woff2'), url('data:,') format('woff'), local('Inter'), local('system-ui');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Force all Brevo form elements to use system fonts and block external font loading */
+#sib-container,
+#sib-container *,
+.sib-form,
+.sib-form *,
+.sib-form-block,
+.sib-form-block *,
+.entry__label,
+.input,
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+button {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* Block any attempts to load external fonts */
+* {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Override any external font declarations */
+@supports (font-display: swap) {
+  * {
+    font-display: swap !important;
+  }
+}
+  
+  #sib-container input:-ms-input-placeholder {
+    text-align: left;
+    font-family: Inter, sans-serif;
+    color: #c0ccda;
+  }
+  
+  #sib-container input::placeholder {
+    text-align: left;
+    font-family: Inter, sans-serif;
+    color: #c0ccda;
+  }
+  
+  #sib-container textarea::placeholder {
+    text-align: left;
+    font-family: Inter, sans-serif;
+    color: #c0ccda;
+  }
+  
+  #sib-container a {
+    text-decoration: underline;
+    color: #2bb2fc;
+  }
+  .sib-form-message-panel {
+    padding: 0 !important;
+    margin: 0 64px 0 16px !important;
+    border: none !important;
+    width: calc(100% - 32px) !important;
+  }
+  
+  .consultation-form {
+    padding: 0 !important;
+  }
+
+  .consultation-form #sib-container {
+    padding: 0 !important;
+  }
+  .consultation-form #sib-container .sib-form-block {
+    padding: 0 !important;
+  }
