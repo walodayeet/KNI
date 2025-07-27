@@ -3,21 +3,21 @@
 # =============================================================================
 # This file contains Coolify-specific deployment settings
 
-version: '1.0'
+version: "1.0"
 
 # Application Configuration
 app:
   name: "kni-platform"
   description: "Knowledge and Intelligence Platform"
   type: "docker-compose"
-  
+
 # Build Configuration
 build:
   dockerfile: "Dockerfile"
   context: "."
   args:
     - NODE_ENV=production
-  
+
 # Health Check Configuration
 healthcheck:
   enabled: true
@@ -43,7 +43,7 @@ environment:
     - POSTGRES_USER
     - POSTGRES_PASSWORD
     - REDIS_PASSWORD
-  
+
   optional:
     - OPENAI_API_KEY
     - STRIPE_SECRET_KEY
@@ -93,8 +93,8 @@ dependencies:
 # Backup Configuration
 backup:
   enabled: true
-  schedule: "0 2 * * *"  # Daily at 2 AM
-  retention: 7  # Keep 7 days of backups
+  schedule: "0 2 * * *" # Daily at 2 AM
+  retention: 7 # Keep 7 days of backups
   volumes:
     - postgres_data
     - uploads
