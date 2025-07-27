@@ -1,0 +1,310 @@
+name: Deploy to Coolify
+
+on:
+  push:
+    branches: [main, production]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Pre-deployment checks
+  pre-deploy-checks:
+    name: Pre-deployment Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      should-deploy: ${{ steps.check.outputs.should-deploy }}
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type checking
+        run: npm run type-check
+
+      - name: Linting
+        run: npm run lint
+
+      - name: Security audit
+        run: npm run security:audit
+        continue-on-error: true
+
+      - name: Generate version
+        id: version
+        run: |
+          VERSION=$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Check deployment conditions
+        id: check
+        run: |
+          # Check if this is a deployment branch
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/production" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Build and test
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [pre-deploy-checks]
+    if: needs.pre-deploy-checks.outputs.should-deploy == 'true'
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: testas_test_db
+          POSTGRES_USER: testas_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: 'postgresql://testas_user:test_password@localhost:5432/testas_test_db'
+
+      - name: Run database migrations
+        run: npx prisma db push
+        env:
+          DATABASE_URL: 'postgresql://testas_user:test_password@localhost:5432/testas_test_db'
+
+      - name: Run tests
+        run: npm run test:ci
+        env:
+          CI: true
+          DATABASE_URL: 'postgresql://testas_user:test_password@localhost:5432/testas_test_db'
+          JWT_SECRET: 'test-jwt-secret-for-ci'
+          NEXTAUTH_SECRET: 'test-nextauth-secret-for-ci'
+          NEXTAUTH_URL: 'http://localhost:3000'
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+          SKIP_ENV_VALIDATION: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts-${{ needs.pre-deploy-checks.outputs.version }}
+          path: |
+            .next/
+            public/
+            package.json
+            package-lock.json
+          retention-days: 7
+
+  # Build Docker image
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [pre-deploy-checks, build-and-test]
+    if: needs.pre-deploy-checks.outputs.should-deploy == 'true'
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=raw,value=${{ needs.pre-deploy-checks.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+            VERSION=${{ needs.pre-deploy-checks.outputs.version }}
+
+  # Deploy to Coolify
+  deploy-coolify:
+    name: Deploy to Coolify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [pre-deploy-checks, build-and-test, build-docker]
+    if: needs.pre-deploy-checks.outputs.should-deploy == 'true'
+    environment: 
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+      url: ${{ vars.APP_URL }}
+    
+    steps:
+      - name: Deploy to Coolify
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: '${{ secrets.COOLIFY_WEBHOOK_URL }}'
+          method: 'POST'
+          customHeaders: '{
+            "Authorization": "Bearer ${{ secrets.COOLIFY_TOKEN }}",
+            "Content-Type": "application/json"
+          }'
+          data: '{
+            "branch": "${{ github.ref_name }}",
+            "commit": "${{ github.sha }}",
+            "version": "${{ needs.pre-deploy-checks.outputs.version }}",
+            "image": "${{ needs.build-docker.outputs.image-tag }}",
+            "environment": "${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
+          }'
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 30
+
+      - name: Health check
+        run: |
+          echo "Performing health check..."
+          max_attempts=10
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "Health check attempt $attempt/$max_attempts"
+            
+            if curl -f -s "${{ vars.APP_URL }}/api/health" > /dev/null; then
+              echo "✅ Health check passed!"
+              curl -s "${{ vars.APP_URL }}/api/health" | jq .
+              exit 0
+            else
+              echo "❌ Health check failed, retrying in 30 seconds..."
+              sleep 30
+              attempt=$((attempt + 1))
+            fi
+          done
+          
+          echo "❌ Health check failed after $max_attempts attempts"
+          exit 1
+
+  # Post-deployment tasks
+  post-deploy:
+    name: Post-deployment Tasks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [pre-deploy-checks, deploy-coolify]
+    if: needs.pre-deploy-checks.outputs.should-deploy == 'true'
+    
+    steps:
+      - name: Run database migrations
+        run: |
+          echo "Database migrations should be handled by the deployment process"
+          echo "If manual migration is needed, connect to your server and run:"
+          echo "docker exec -it kni-platform-app npx prisma migrate deploy"
+
+      - name: Notify deployment success
+        run: |
+          echo "🚀 Deployment completed successfully!"
+          echo "Version: ${{ needs.pre-deploy-checks.outputs.version }}"
+          echo "Environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
+          echo "URL: ${{ vars.APP_URL }}"
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.pre-deploy-checks.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ vars.APP_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Health Check" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Application is healthy and responding" >> $GITHUB_STEP_SUMMARY
+
+  # Rollback on failure
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [pre-deploy-checks, deploy-coolify]
+    if: failure() && needs.pre-deploy-checks.outputs.should-deploy == 'true'
+    
+    steps:
+      - name: Trigger rollback
+        run: |
+          echo "❌ Deployment failed, consider triggering rollback"
+          echo "Manual rollback may be required in Coolify dashboard"
+          
+      - name: Notify failure
+        run: |
+          echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment to ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }} failed." >> $GITHUB_STEP_SUMMARY
+          echo "Please check the logs and consider manual intervention." >> $GITHUB_STEP_SUMMARY

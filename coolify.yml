@@ -1,0 +1,151 @@
+# =============================================================================
+# Coolify Deployment Configuration for KNI Platform
+# =============================================================================
+# This file contains Coolify-specific deployment settings
+
+version: '1.0'
+
+# Application Configuration
+app:
+  name: "kni-platform"
+  description: "Knowledge and Intelligence Platform"
+  type: "docker-compose"
+  
+# Build Configuration
+build:
+  dockerfile: "Dockerfile"
+  context: "."
+  args:
+    - NODE_ENV=production
+  
+# Health Check Configuration
+healthcheck:
+  enabled: true
+  path: "/api/health"
+  port: 3000
+  interval: 30
+  timeout: 10
+  retries: 3
+  start_period: 40
+
+# Environment Variables (Reference)
+# These should be configured in Coolify's environment settings
+environment:
+  required:
+    - NODE_ENV
+    - DATABASE_URL
+    - DIRECT_URL
+    - JWT_SECRET
+    - NEXTAUTH_SECRET
+    - NEXTAUTH_URL
+    - NEXT_PUBLIC_APP_URL
+    - POSTGRES_DB
+    - POSTGRES_USER
+    - POSTGRES_PASSWORD
+    - REDIS_PASSWORD
+  
+  optional:
+    - OPENAI_API_KEY
+    - STRIPE_SECRET_KEY
+    - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    - SENDGRID_API_KEY
+    - EMAIL_FROM
+    - AWS_S3_BUCKET
+    - AWS_S3_REGION
+    - AWS_S3_ACCESS_KEY_ID
+    - AWS_S3_SECRET_ACCESS_KEY
+    - SENTRY_DSN
+
+# Volumes Configuration
+volumes:
+  - name: "postgres_data"
+    type: "persistent"
+    mount: "/var/lib/postgresql/data"
+  - name: "redis_data"
+    type: "persistent"
+    mount: "/data"
+  - name: "uploads"
+    type: "persistent"
+    mount: "/app/uploads"
+  - name: "logs"
+    type: "persistent"
+    mount: "/app/logs"
+
+# Network Configuration
+network:
+  type: "bridge"
+  name: "kni-network"
+
+# Service Dependencies
+dependencies:
+  - postgres
+  - redis
+
+# Backup Configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: 7  # Keep 7 days of backups
+  volumes:
+    - postgres_data
+    - uploads
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  metrics:
+    - cpu
+    - memory
+    - disk
+    - network
+  alerts:
+    - type: "cpu"
+      threshold: 80
+    - type: "memory"
+      threshold: 85
+    - type: "disk"
+      threshold: 90
+
+# Scaling Configuration
+scaling:
+  min_replicas: 1
+  max_replicas: 3
+  target_cpu: 70
+  target_memory: 80
+
+# SSL/TLS Configuration
+ssl:
+  enabled: true
+  auto_generate: true
+  force_https: true
+
+# Deployment Strategy
+deployment:
+  strategy: "rolling"
+  max_unavailable: 0
+  max_surge: 1
+  timeout: 600
+
+# Pre-deployment Commands
+pre_deploy:
+  - "npx prisma migrate deploy"
+  - "npx prisma generate"
+
+# Post-deployment Commands
+post_deploy:
+  - "npm run db:seed"
+
+# Resource Limits
+resources:
+  app:
+    cpu: "1000m"
+    memory: "2Gi"
+    storage: "10Gi"
+  postgres:
+    cpu: "500m"
+    memory: "1Gi"
+    storage: "20Gi"
+  redis:
+    cpu: "200m"
+    memory: "512Mi"
+    storage: "5Gi"
