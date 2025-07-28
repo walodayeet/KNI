@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   app:
@@ -25,7 +25,7 @@ services:
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
       - UPLOAD_PROVIDER=${UPLOAD_PROVIDER:-minio}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://localhost:9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_BUCKET=${MINIO_BUCKET:-kni-uploads}
@@ -40,7 +40,6 @@ services:
     depends_on:
       - postgres
       - redis
-      - minio
     networks:
       - kni-network
     healthcheck:
@@ -111,27 +110,6 @@ services:
     depends_on:
       - postgres
 
-  minio:
-    image: minio/minio:latest
-    container_name: kni-platform-minio
-    restart: unless-stopped
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
-    volumes:
-      - minio_data:/data
-    networks:
-      - kni-network
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-
 volumes:
   postgres_data:
     driver: local
@@ -140,8 +118,6 @@ volumes:
   uploads:
     driver: local
   logs:
-    driver: local
-  minio_data:
     driver: local
 
 networks:

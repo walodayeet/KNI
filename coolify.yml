@@ -75,9 +75,6 @@ volumes:
   - name: "logs"
     type: "persistent"
     mount: "/app/logs"
-  - name: "minio_data"
-    type: "persistent"
-    mount: "/data"
 
 # Network Configuration
 network:
@@ -88,7 +85,6 @@ network:
 dependencies:
   - postgres
   - redis
-  - minio
 
 # Backup Configuration
 backup:
@@ -98,7 +94,6 @@ backup:
   volumes:
     - postgres_data
     - uploads
-    - minio_data
 
 # Monitoring Configuration
 monitoring:
@@ -159,7 +154,3 @@ resources:
     cpu: "200m"
     memory: "512Mi"
     storage: "5Gi"
-  minio:
-    cpu: "300m"
-    memory: "512Mi"
-    storage: "50Gi"
