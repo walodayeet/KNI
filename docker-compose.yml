@@ -22,12 +22,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: testas-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-dev-redis-password-2024}
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-dev-redis-password-2024}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
