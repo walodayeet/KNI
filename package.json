@@ -54,7 +54,7 @@
     "clean": "rimraf .next out dist coverage reports",
     "clean:deps": "rimraf node_modules package-lock.json && npm install",
     "clean:all": "npm run clean && npm run clean:deps",
-    "prepare": "husky install",
+    "prepare": "node -e \"try { require('husky').install() } catch (e) { console.log('Husky not available, skipping...') }\"",
     "pre-commit": "lint-staged",
     "postinstall": "prisma generate",
     "validate": "npm run type-check && npm run lint && npm run test:ci",
