@@ -733,7 +733,7 @@ export class SearchEngine extends EventEmitter {
       const titleTokens = this.textProcessor.tokenize(doc.title)
       const contentTokens = this.textProcessor.tokenize(doc.content)
       
-      [...titleTokens, ...contentTokens].forEach(token => {
+      [...titleTokens, ...contentTokens].forEach((token: string) => {
         if (token.length >= this.config.minQueryLength && token.includes(queryLower)) {
           terms.add(token)
         }
