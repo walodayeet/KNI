@@ -10,6 +10,15 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
+# Install production dependencies
+FROM base AS production-deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+RUN npm ci --only=production && npm cache clean --force
+RUN npx prisma generate
+
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
@@ -31,9 +40,8 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Install only production dependencies for runtime
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+# Copy production dependencies
+COPY --from=production-deps /app/node_modules ./node_modules
 
 COPY --from=builder /app/public ./public
 
@@ -45,9 +53,8 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma files
+# Copy Prisma schema for runtime
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 USER nextjs
 
