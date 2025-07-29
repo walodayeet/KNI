@@ -40,7 +40,7 @@ export interface ExtendedJWT extends JWT {
 }
 
 // Authentication errors
-export class AuthError extends Error {
+class AuthError extends Error {
   public readonly code: string
   public readonly statusCode: number
 
@@ -52,18 +52,19 @@ export class AuthError extends Error {
   }
 }
 
-export const AuthErrors = {
+const AuthErrors = {
   InvalidCredentials: () => new AuthError('Invalid credentials', 'INVALID_CREDENTIALS', 401),
   AccountNotFound: () => new AuthError('Account not found', 'ACCOUNT_NOT_FOUND', 404),
   EmailNotVerified: () => new AuthError('Email not verified', 'EMAIL_NOT_VERIFIED', 403),
   AccountLocked: () => new AuthError('Account is locked', 'ACCOUNT_LOCKED', 423),
   TooManyAttempts: () => new AuthError('Too many login attempts', 'TOO_MANY_ATTEMPTS', 429),
   SessionExpired: () => new AuthError('Session expired', 'SESSION_EXPIRED', 401),
-  InsufficientPermissions: () => new AuthError('Insufficient permissions', 'INSUFFICIENT_PERMISSIONS', 403),
+  InsufficientPermissions: () =>
+    new AuthError('Insufficient permissions', 'INSUFFICIENT_PERMISSIONS', 403),
 }
 
 // Password utilities
-export class PasswordUtils {
+class PasswordUtils {
   static async hash(password: string): Promise<string> {
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12')
     return hash(password, saltRounds)
@@ -74,31 +75,35 @@ export class PasswordUtils {
   }
 
   static generateSecurePassword(length: number = 16): string {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?'
+    const charset =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?'
     let password = ''
-    
+
     // Ensure at least one character from each required category
     const categories = [
       'abcdefghijklmnopqrstuvwxyz',
       'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
       '0123456789',
-      '!@#$%^&*()_+-=[]{}|;:,.<>?'
+      '!@#$%^&*()_+-=[]{}|;:,.<>?',
     ]
-    
+
     // Add one character from each category
     for (const category of categories) {
       const randomIndex = crypto.randomInt(0, category.length)
       password += category[randomIndex]
     }
-    
+
     // Fill the rest randomly
     for (let i = password.length; i < length; i++) {
       const randomIndex = crypto.randomInt(0, charset.length)
       password += charset[randomIndex]
     }
-    
+
     // Shuffle the password
-    return password.split('').sort(() => Math.random() - 0.5).join('')
+    return password
+      .split('')
+      .sort(() => Math.random() - 0.5)
+      .join('')
   }
 
   static generateResetToken(): string {
@@ -107,7 +112,7 @@ export class PasswordUtils {
 }
 
 // User management utilities
-export class UserManager {
+class UserManager {
   static async createUser(userData: {
     name: string
     email: string
@@ -264,11 +269,7 @@ export class UserManager {
     return user
   }
 
-  static async changePassword(
-    userId: string,
-    currentPassword: string,
-    newPassword: string
-  ) {
+  static async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
     })
@@ -278,10 +279,7 @@ export class UserManager {
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await PasswordUtils.verify(
-      currentPassword,
-      user.password
-    )
+    const isCurrentPasswordValid = await PasswordUtils.verify(currentPassword, user.password)
 
     if (!isCurrentPasswordValid) {
       throw AuthErrors.InvalidCredentials()
@@ -318,7 +316,7 @@ export class UserManager {
 }
 
 // Session management
-export class SessionManager {
+class SessionManager {
   static async createSession(userId: string, userAgent?: string, ip?: string) {
     const session = await prisma.session.create({
       data: {
@@ -378,7 +376,7 @@ export class SessionManager {
 }
 
 // Role-based access control
-export class RoleManager {
+class RoleManager {
   private static roleHierarchy = {
     admin: ['admin', 'teacher', 'student', 'user'],
     teacher: ['teacher', 'student', 'user'],
@@ -412,7 +410,7 @@ export class RoleManager {
 
   static async updateUserRole(userId: string, newRole: string, updatedBy: string) {
     const validRoles = ['admin', 'teacher', 'student', 'user']
-    
+
     if (!validRoles.includes(newRole)) {
       throw new AuthError('Invalid role', 'INVALID_ROLE', 400)
     }
@@ -448,7 +446,7 @@ export const authOptions: NextAuthOptions = {
 
         // Rate limiting for login attempts
         const rateLimitResult = rateLimit({ maxRequests: 5, windowMs: 15 * 60 * 1000 })(req as any)
-        
+
         if (!rateLimitResult.allowed) {
           throw AuthErrors.TooManyAttempts()
         }
@@ -463,10 +461,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Verify password
-        const isPasswordValid = await PasswordUtils.verify(
-          credentials.password,
-          user.password
-        )
+        const isPasswordValid = await PasswordUtils.verify(credentials.password, user.password)
 
         if (!isPasswordValid) {
           throw AuthErrors.InvalidCredentials()
@@ -498,7 +493,7 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
-    
+
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
           GoogleProvider({
@@ -507,7 +502,7 @@ export const authOptions: NextAuthOptions = {
           }),
         ]
       : []),
-    
+
     ...(process.env.GITHUB_ID && process.env.GITHUB_SECRET
       ? [
           GitHubProvider({
@@ -517,16 +512,16 @@ export const authOptions: NextAuthOptions = {
         ]
       : []),
   ],
-  
+
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  
+
   jwt: {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  
+
   callbacks: {
     async jwt({ token, user, account }) {
       if (user) {
@@ -534,21 +529,21 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role || 'user'
         token.isEmailVerified = (user as any).isEmailVerified || false
       }
-      
+
       return token
     },
-    
+
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string
         ;(session.user as any).role = token.role
         ;(session.user as any).isEmailVerified = token.isEmailVerified
       }
-      
+
       return session
     },
   },
-  
+
   pages: {
     signIn: '/auth/signin',
     signUp: '/auth/signup',
@@ -556,7 +551,7 @@ export const authOptions: NextAuthOptions = {
     verifyRequest: '/auth/verify-request',
     newUser: '/auth/new-user',
   },
-  
+
   events: {
     async signIn({ user, account, profile }) {
       await logger.info('User signed in', {
@@ -565,7 +560,7 @@ export const authOptions: NextAuthOptions = {
         provider: account?.provider,
       })
     },
-    
+
     async signOut({ session, token }) {
       await logger.info('User signed out', {
         userId: (session?.user as any)?.id || (token as any)?.id,
@@ -638,31 +633,27 @@ export async function logout(sessionToken: string): Promise<void> {
   try {
     // If using JWT tokens, we can't invalidate them server-side
     // But we can add the token to a blacklist or invalidate database sessions
-    
+
     // For database sessions, find and delete the session
     await prisma.session.deleteMany({
       where: {
         id: sessionToken,
       },
-    });
+    })
 
     await logger.info('User logged out', {
-      sessionToken: sessionToken.substring(0, 10) + '...', // Log partial token for security
-    });
+      sessionToken: `${sessionToken.substring(0, 10)}...`, // Log partial token for security
+    })
   } catch (error) {
-    await logger.error('Logout failed', { error, sessionToken: sessionToken.substring(0, 10) + '...' });
-    throw new AuthError('Logout failed', 'LOGOUT_FAILED', 500);
+    await logger.error('Logout failed', {
+      error,
+      sessionToken: `${sessionToken.substring(0, 10)}...`,
+    })
+    throw new AuthError('Logout failed', 'LOGOUT_FAILED', 500)
   }
 }
 
 // Export utilities
-export {
-  PasswordUtils,
-  UserManager,
-  SessionManager,
-  RoleManager,
-  AuthError,
-  AuthErrors,
-}
+export { PasswordUtils, UserManager, SessionManager, RoleManager, AuthError, AuthErrors }
 
 export default authOptions
