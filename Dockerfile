@@ -9,6 +9,8 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
+# Set dummy DATABASE_URL for prisma generate during build
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
 RUN npm ci
 
 # Install production dependencies
@@ -17,6 +19,8 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
+# Set dummy DATABASE_URL for prisma generate during build
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
 RUN npm ci --only=production && npm cache clean --force
 RUN npx prisma generate
 
@@ -26,6 +30,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Set dummy DATABASE_URL for prisma generate during build
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
 # Generate Prisma client
 RUN npx prisma generate
 
