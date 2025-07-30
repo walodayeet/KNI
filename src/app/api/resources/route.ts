@@ -141,16 +141,15 @@ export async function POST(request: NextRequest) {
     const resource = await prisma.study_materials.create({
       data: {
         title: validatedData.title,
-        description: validatedData.description,
+        description: validatedData.description || null,
         subject_area: validatedData.subject_area,
         resource_type: validatedData.resource_type,
         file_url: validatedData.file_url,
-        file_size: validatedData.file_size,
-        duration: validatedData.duration,
-        difficulty_level: validatedData.difficulty_level || 'MEDIUM',
+        file_size: validatedData.file_size || null,
+        duration: validatedData.duration || null,
+        difficulty_level: validatedData.difficulty_level || null,
         tags: validatedData.tags || [],
-        is_premium: validatedData.is_premium,
-        is_active: true
+        is_premium: validatedData.is_premium
       }
     });
 

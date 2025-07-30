@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, useRouter, usePathname } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 // Images are now referenced directly as strings in src attributes
 
 export default function Header() {
   const t = useTranslations("HomePage");
   const locale = useLocale();
-  const router = useRouter();
   const pathname = usePathname(); // Use usePathname to get the current path
   const [isOpen, setIsOpen] = useState(false);
 
-  // Determine the other locale
-  const otherLocale = locale === "vn" ? "en" : "vn";
+
 
   // Function to construct the new URL with the new locale
   const getLocalizedPath = (newLocale: string) => {

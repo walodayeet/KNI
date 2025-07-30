@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Check if user exists and has permission
     const user = await prisma.user.findUnique({
       where: { id: validatedData.userId },
-      select: { id: true, user_type: true, email: true }
+      select: { id: true, user_type: true, role: true, email: true }
     });
 
     if (!user) {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has permission to upload (premium users or admin)
-    if (user.user_type !== 'PREMIUM' && user.user_type !== 'ADMIN') {
+    if (user.user_type !== 'PREMIUM' && user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'File upload is only available for premium users' },
         { status: 403 }
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Send webhook to n8n for processing
     try {
-      await fetch(process.env.N8N_WEBHOOK_URL + '/file-upload', {
+      await fetch(`${process.env.N8N_WEBHOOK_URL  }/file-upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         })
       });
     } catch (webhookError) {
-      console.error('Failed to send upload webhook:', webhookError);
+      // Failed to send upload webhook
     }
 
     return NextResponse.json({
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error initiating file upload:', error);
+    // Error initiating file upload
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching upload data:', error);
+    // Error fetching upload data
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -238,15 +238,23 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update upload status
+    const updateData: any = {
+      status: validatedData.status,
+      progress: validatedData.progress || upload.progress,
+      updated_at: new Date()
+    };
+
+    if (validatedData.errorMessage !== undefined) {
+      updateData.error_message = validatedData.errorMessage;
+    }
+
+    if (validatedData.mockTestId !== undefined) {
+      updateData.mock_test_id = validatedData.mockTestId;
+    }
+
     const updatedUpload = await prisma.file_uploads.update({
       where: { id: validatedData.uploadId },
-      data: {
-        status: validatedData.status,
-        progress: validatedData.progress || upload.progress,
-        error_message: validatedData.errorMessage,
-        mock_test_id: validatedData.mockTestId,
-        updated_at: new Date()
-      }
+      data: updateData
     });
 
     // Log webhook
@@ -270,7 +278,7 @@ export async function PUT(request: NextRequest) {
 
         if (user) {
           // Send completion webhook to n8n for notification
-          await fetch(process.env.N8N_WEBHOOK_URL + '/upload-completed', {
+          await fetch(`${process.env.N8N_WEBHOOK_URL  }/upload-completed`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -284,7 +292,7 @@ export async function PUT(request: NextRequest) {
           });
         }
       } catch (notificationError) {
-        console.error('Failed to send completion notification:', notificationError);
+        // Failed to send completion notification
       }
     }
 
@@ -294,7 +302,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating upload status:', error);
+    // Error updating upload status
     
     // Log failed webhook
     try {
@@ -308,7 +316,7 @@ export async function PUT(request: NextRequest) {
         }
       });
     } catch (logError) {
-      console.error('Failed to log webhook error:', logError);
+      // Failed to log webhook error
     }
 
     return NextResponse.json(
@@ -362,7 +370,7 @@ export async function DELETE(request: NextRequest) {
 
     // Send cancellation webhook to n8n
     try {
-      await fetch(process.env.N8N_WEBHOOK_URL + '/upload-cancelled', {
+      await fetch(`${process.env.N8N_WEBHOOK_URL  }/upload-cancelled`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -373,7 +381,7 @@ export async function DELETE(request: NextRequest) {
         })
       });
     } catch (webhookError) {
-      console.error('Failed to send cancellation webhook:', webhookError);
+      // Failed to send cancellation webhook
     }
 
     return NextResponse.json({
@@ -381,7 +389,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error cancelling upload:', error);
+    // Error cancelling upload
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

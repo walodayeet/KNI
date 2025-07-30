@@ -15,7 +15,7 @@ export default function AuthGuard({
   requireAuth = true, 
   redirectTo = '/login' 
 }: AuthGuardProps) {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -24,10 +24,10 @@ export default function AuthGuard({
   }, []);
 
   useEffect(() => {
-    if (mounted && !loading && requireAuth && !user) {
+    if (mounted && !isLoading && requireAuth && !user) {
       router.push(redirectTo);
     }
-  }, [mounted, user, loading, requireAuth, redirectTo, router]);
+  }, [mounted, user, isLoading, requireAuth, redirectTo, router]);
 
   // Prevent hydration mismatch by not rendering anything until mounted
   if (!mounted) {
@@ -39,7 +39,7 @@ export default function AuthGuard({
   }
 
   // Show loading spinner while checking authentication
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>

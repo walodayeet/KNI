@@ -6,7 +6,6 @@ import path from 'path'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import yaml from 'js-yaml'
-import tar from 'tar'
 import { createHash } from 'crypto'
 
 const execAsync = promisify(exec)
@@ -736,7 +735,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref === 'refs/heads/main'
     environment: ${config.environment}
 
     steps:
@@ -801,7 +800,7 @@ jobs:
     })
 
     const valuesYaml = yaml.dump({
-      replicaCount: KubernetesManager['getReplicaCount'](config.environment),
+      replicaCount: KubernetesManager.getReplicaCount(config.environment),
       image: {
         repository: config.container.image,
         tag: config.container.tag,

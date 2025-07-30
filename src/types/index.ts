@@ -4,6 +4,7 @@ export interface User {
   email: string;
   name: string | null;
   role: 'STUDENT' | 'TEACHER' | 'ADMIN';
+  user_type: 'FREE' | 'PREMIUM';
   createdAt: Date;
   updatedAt: Date;
 }

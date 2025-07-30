@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database';
-import { z } from 'zod';
-
-const getUserProgressSchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
-  subjectArea: z.string().optional()
-});
 
 // GET /api/user-progress - Get user progress and analytics
 export async function GET(request: NextRequest) {
@@ -98,20 +92,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Get subject-wise performance
-    const subjectPerformance = await prisma.mock_test_attempts.groupBy({
-      by: ['mock_test'],
-      where: {
-        user_id: userId,
-        status: 'completed'
-      },
-      _avg: {
-        percentage: true
-      },
-      _count: {
-        id: true
-      }
-    });
+
 
     // Get improvement trends (last 30 days)
     const thirtyDaysAgo = new Date();
@@ -139,7 +120,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get active recommendations (premium users)
-    let activeRecommendations = [];
+    let activeRecommendations: any[] = [];
     if (user.user_type === 'PREMIUM') {
       activeRecommendations = await prisma.daily_recommendations.findMany({
         where: {
@@ -158,7 +139,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get active weekly assignments (free users)
-    let activeAssignments = [];
+    let activeAssignments: any[] = [];
     if (user.user_type === 'FREE') {
       activeAssignments = await prisma.weekly_assignments.findMany({
         where: {
@@ -196,10 +177,10 @@ export async function GET(request: NextRequest) {
         orderBy: { completed_at: 'desc' }
       });
 
-      if (attempts.length === 0) return 0;
+      if (attempts.length === 0) {return 0;}
 
       let streak = 0;
-      let currentDate = new Date();
+      const currentDate = new Date();
       currentDate.setHours(0, 0, 0, 0);
 
       for (const attempt of attempts) {
@@ -240,7 +221,7 @@ export async function GET(request: NextRequest) {
       activeAssignments
     });
   } catch (error) {
-    console.error('Error fetching user progress:', error);
+    // Error fetching user progress
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -310,7 +291,7 @@ export async function POST(request: NextRequest) {
         message: 'Progress updated successfully',
         progress: updatedProgress
       });
-    } else {
+    } 
       // Create new progress record
       const newProgress = await prisma.user_progress.create({
         data: {
@@ -331,9 +312,9 @@ export async function POST(request: NextRequest) {
         message: 'Progress created successfully',
         progress: newProgress
       });
-    }
+    
   } catch (error) {
-    console.error('Error updating user progress:', error);
+    // Error updating user progress
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

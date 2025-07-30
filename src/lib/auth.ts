@@ -8,7 +8,7 @@ import { compare, hash } from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from './database'
 import { logger } from './logger'
-import { Validator, userSchemas } from './validation'
+import { Validator, userSchemas, customSchemas } from './validation'
 import { rateLimit } from './security'
 import crypto from 'crypto'
 
@@ -17,9 +17,7 @@ export interface ExtendedUser extends User {
   id: string
   email: string
   name?: string
-  role: 'admin' | 'teacher' | 'student' | 'user'
-  isEmailVerified: boolean
-  lastLoginAt?: Date
+  role: 'ADMIN' | 'TEACHER' | 'STUDENT' | 'GUEST'
   createdAt: Date
   updatedAt: Date
 }
@@ -35,8 +33,6 @@ export interface ExtendedSession extends Session {
 export interface ExtendedJWT extends JWT {
   id: string
   role: string
-  isEmailVerified: boolean
-  lastLoginAt?: Date
 }
 
 // Authentication errors
@@ -117,7 +113,7 @@ class UserManager {
     name: string
     email: string
     password: string
-    role?: 'admin' | 'teacher' | 'student' | 'user'
+    role?: 'ADMIN' | 'TEACHER' | 'STUDENT' | 'GUEST'
   }) {
     // Validate input
     const validation = await Validator.validate(userSchemas.register, {
@@ -148,10 +144,7 @@ class UserManager {
         name: userData.name,
         email: userData.email.toLowerCase(),
         password: hashedPassword,
-        role: userData.role || 'user',
-        isEmailVerified: false,
-        emailVerificationToken: crypto.randomBytes(32).toString('hex'),
-        emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        role: userData.role || 'GUEST'
       },
     })
 
@@ -164,109 +157,17 @@ class UserManager {
     return user
   }
 
-  static async verifyEmail(token: string) {
-    const user = await prisma.user.findFirst({
-      where: {
-        emailVerificationToken: token,
-        emailVerificationExpires: {
-          gt: new Date(),
-        },
-      },
-    })
+  // Email verification not implemented in current schema
 
-    if (!user) {
-      throw new AuthError('Invalid or expired verification token', 'INVALID_TOKEN', 400)
-    }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        isEmailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationExpires: null,
-      },
-    })
-
-    await logger.info('Email verified', {
-      userId: user.id,
-      email: user.email,
-    })
-
-    return user
+  // Password reset not implemented in current schema
+  static async initiatePasswordReset(_email: string) {
+    // Don't reveal if user exists
+    return { success: true }
   }
 
-  static async initiatePasswordReset(email: string) {
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    })
-
-    if (!user) {
-      // Don't reveal if user exists
-      return { success: true }
-    }
-
-    const resetToken = PasswordUtils.generateResetToken()
-    const resetExpires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordResetToken: resetToken,
-        passwordResetExpires: resetExpires,
-      },
-    })
-
-    await logger.info('Password reset initiated', {
-      userId: user.id,
-      email: user.email,
-    })
-
-    return { success: true, token: resetToken }
-  }
-
-  static async resetPassword(token: string, newPassword: string) {
-    // Validate password
-    const validation = await Validator.validate(
-      userSchemas.changePassword.shape.newPassword,
-      newPassword
-    )
-
-    if (!validation.success) {
-      throw new AuthError('Invalid password format', 'INVALID_PASSWORD', 400)
-    }
-
-    const user = await prisma.user.findFirst({
-      where: {
-        passwordResetToken: token,
-        passwordResetExpires: {
-          gt: new Date(),
-        },
-      },
-    })
-
-    if (!user) {
-      throw new AuthError('Invalid or expired reset token', 'INVALID_TOKEN', 400)
-    }
-
-    const hashedPassword = await PasswordUtils.hash(newPassword)
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-        // Invalidate all sessions
-        sessionVersion: { increment: 1 },
-      },
-    })
-
-    await logger.info('Password reset completed', {
-      userId: user.id,
-      email: user.email,
-    })
-
-    return user
+  // Password reset not implemented in current schema
+  static async resetPassword(_token: string, _newPassword: string) {
+    throw new AuthError('Password reset not available', 'NOT_IMPLEMENTED', 501)
   }
 
   static async changePassword(userId: string, currentPassword: string, newPassword: string) {
@@ -287,7 +188,7 @@ class UserManager {
 
     // Validate new password
     const validation = await Validator.validate(
-      userSchemas.changePassword.shape.newPassword,
+      customSchemas.password,
       newPassword
     )
 
@@ -301,8 +202,6 @@ class UserManager {
       where: { id: userId },
       data: {
         password: hashedPassword,
-        // Invalidate all sessions except current
-        sessionVersion: { increment: 1 },
       },
     })
 
@@ -321,8 +220,7 @@ class SessionManager {
     const session = await prisma.session.create({
       data: {
         userId,
-        userAgent: userAgent || 'unknown',
-        ip: ip || 'unknown',
+        token: crypto.randomBytes(32).toString('hex'),
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       },
     })
@@ -378,10 +276,10 @@ class SessionManager {
 // Role-based access control
 class RoleManager {
   private static roleHierarchy = {
-    admin: ['admin', 'teacher', 'student', 'user'],
-    teacher: ['teacher', 'student', 'user'],
-    student: ['student', 'user'],
-    user: ['user'],
+    ADMIN: ['ADMIN', 'TEACHER', 'STUDENT', 'GUEST'],
+    TEACHER: ['TEACHER', 'STUDENT', 'GUEST'],
+    STUDENT: ['STUDENT', 'GUEST'],
+    GUEST: ['GUEST'],
   }
 
   static hasRole(userRole: string, requiredRole: string): boolean {
@@ -391,8 +289,8 @@ class RoleManager {
 
   static hasPermission(userRole: string, permission: string): boolean {
     const permissions = {
-      admin: ['*'],
-      teacher: [
+      ADMIN: ['*'],
+      TEACHER: [
         'test.create',
         'test.update',
         'test.delete',
@@ -400,8 +298,8 @@ class RoleManager {
         'student.view',
         'result.view',
       ],
-      student: ['test.take', 'result.view.own'],
-      user: ['test.view.public'],
+      STUDENT: ['test.take', 'result.view.own'],
+      GUEST: ['test.view.public'],
     }
 
     const userPermissions = permissions[userRole as keyof typeof permissions] || []
@@ -409,7 +307,7 @@ class RoleManager {
   }
 
   static async updateUserRole(userId: string, newRole: string, updatedBy: string) {
-    const validRoles = ['admin', 'teacher', 'student', 'user']
+    const validRoles = ['ADMIN', 'TEACHER', 'STUDENT', 'GUEST']
 
     if (!validRoles.includes(newRole)) {
       throw new AuthError('Invalid role', 'INVALID_ROLE', 400)
@@ -467,16 +365,7 @@ export const authOptions: NextAuthOptions = {
           throw AuthErrors.InvalidCredentials()
         }
 
-        // Check if email is verified
-        if (!user.isEmailVerified) {
-          throw AuthErrors.EmailNotVerified()
-        }
-
-        // Update last login
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
-        })
+        // Note: Email verification not implemented in current schema
 
         await logger.info('User logged in', {
           userId: user.id,
@@ -489,7 +378,6 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-          isEmailVerified: user.isEmailVerified,
         }
       },
     }),
@@ -523,21 +411,19 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account: _account }) {
       if (user) {
         token.id = user.id
-        token.role = (user as any).role || 'user'
-        token.isEmailVerified = (user as any).isEmailVerified || false
+        token.role = (user as any).role || 'GUEST'
       }
 
       return token
     },
 
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
+      if (token && session.user) {
+        ;(session.user as any).id = token.id as string
         ;(session.user as any).role = token.role
-        ;(session.user as any).isEmailVerified = token.isEmailVerified
       }
 
       return session
@@ -546,14 +432,13 @@ export const authOptions: NextAuthOptions = {
 
   pages: {
     signIn: '/auth/signin',
-    signUp: '/auth/signup',
     error: '/auth/error',
     verifyRequest: '/auth/verify-request',
     newUser: '/auth/new-user',
   },
 
   events: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile: _profile }) {
       await logger.info('User signed in', {
         userId: user.id,
         email: user.email,
@@ -580,10 +465,7 @@ export async function validateSession(sessionToken?: string): Promise<ExtendedUs
     // For now, we'll implement a basic version
     const session = await prisma.session.findFirst({
       where: {
-        id: sessionToken,
-        expiresAt: {
-          gt: new Date(),
-        },
+        token: sessionToken,
       },
       include: {
         user: true,
@@ -598,9 +480,7 @@ export async function validateSession(sessionToken?: string): Promise<ExtendedUs
       id: session.user.id,
       email: session.user.email,
       name: session.user.name,
-      role: session.user.role as 'admin' | 'teacher' | 'student' | 'user',
-      isEmailVerified: session.user.isEmailVerified,
-      lastLoginAt: session.user.lastLoginAt,
+      role: session.user.role as 'ADMIN' | 'TEACHER' | 'STUDENT' | 'GUEST',
       createdAt: session.user.createdAt,
       updatedAt: session.user.updatedAt,
     } as ExtendedUser
@@ -637,7 +517,7 @@ export async function logout(sessionToken: string): Promise<void> {
     // For database sessions, find and delete the session
     await prisma.session.deleteMany({
       where: {
-        id: sessionToken,
+        token: sessionToken,
       },
     })
 

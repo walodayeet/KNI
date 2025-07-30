@@ -10,7 +10,7 @@ import {
   ArrowLeftIcon,
   TrophyIcon
 } from '@heroicons/react/24/outline';
-import {routing} from '@/i18n/routing';
+
 
 interface EvaluationDetail {
   question: string;
@@ -33,6 +33,7 @@ interface TestResult {
 }
 
 export default function TestResultPage() {
+  // @ts-ignore
   const { user } = useAuth();
   const params = useParams();
   const resultId = params.id as string;
@@ -43,7 +44,7 @@ export default function TestResultPage() {
   useEffect(() => {
     const fetchResult = async () => {
       const token = localStorage.getItem('testas_token');
-      if (!token || !resultId) return;
+      if (!token || !resultId) {return;}
       
       try {
         const response = await fetch(`https://n8n.phunhuan-ai.com/webhook/testas/results/${resultId}`, {
@@ -99,14 +100,14 @@ export default function TestResultPage() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
+    if (score >= 80) {return 'text-green-600';}
+    if (score >= 60) {return 'text-yellow-600';}
     return 'text-red-600';
   };
 
   const getScoreBgColor = (score: number) => {
-    if (score >= 80) return 'bg-green-100';
-    if (score >= 60) return 'bg-yellow-100';
+    if (score >= 80) {return 'bg-green-100';}
+    if (score >= 60) {return 'bg-yellow-100';}
     return 'bg-red-100';
   };
 

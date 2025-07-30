@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     const evaluation = await prisma.test_evaluations.create({
       data: {
         ...validatedData,
+        n8n_workflow_id: validatedData.n8n_workflow_id ?? null,
         generated_by_n8n: true
       }
     });
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     // For premium users, generate daily recommendations
     if (attempt.user.user_type === 'PREMIUM') {
       try {
-        await fetch(process.env.N8N_WEBHOOK_URL + '/generate-recommendations', {
+        await fetch(`${process.env.N8N_WEBHOOK_URL  }/generate-recommendations`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
           })
         });
       } catch (webhookError) {
-        console.error('Failed to trigger recommendations webhook:', webhookError);
+        // Failed to trigger recommendations webhook
       }
     }
 
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error creating evaluation:', error);
+    // Error creating evaluation
     
     // Log failed webhook
     try {
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
         }
       });
     } catch (logError) {
-      console.error('Failed to log webhook error:', logError);
+      // Failed to log webhook error
     }
 
     return NextResponse.json(
@@ -176,7 +177,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let whereClause: any = {};
+    const whereClause: any = {};
     
     if (attemptId) {
       whereClause.attempt_id = attemptId;
@@ -220,7 +221,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error fetching evaluations:', error);
+    // Error fetching evaluations
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

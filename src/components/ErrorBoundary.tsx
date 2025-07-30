@@ -2,7 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { logger } from '@/lib/logger'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { ExclamationTriangleIcon, ArrowPathIcon, HomeIcon, BugAntIcon } from '@heroicons/react/24/outline'
 
 interface Props {
@@ -43,7 +43,7 @@ class ErrorBoundary extends Component<Props, State> {
     }
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({
       error,
       errorInfo,
@@ -81,7 +81,7 @@ class ErrorBoundary extends Component<Props, State> {
     this.reportError(errorContext)
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     // Clear any pending retry timeouts
     this.retryTimeouts.forEach(timeout => clearTimeout(timeout))
   }
@@ -132,8 +132,6 @@ class ErrorBoundary extends Component<Props, State> {
 
     this.setState({
       hasError: false,
-      error: undefined,
-      errorInfo: undefined,
       retryCount: newRetryCount,
     })
 
@@ -181,9 +179,9 @@ class ErrorBoundary extends Component<Props, State> {
     const { level } = this.props
     const { retryCount } = this.state
 
-    if (level === 'critical' || retryCount > 2) return 'critical'
-    if (level === 'page' || retryCount > 1) return 'high'
-    if (retryCount > 0) return 'medium'
+    if (level === 'critical' || retryCount > 2) {return 'critical'}
+    if (level === 'page' || retryCount > 1) {return 'high'}
+    if (retryCount > 0) {return 'medium'}
     return 'low'
   }
 
@@ -235,7 +233,7 @@ class ErrorBoundary extends Component<Props, State> {
                     size="sm"
                     variant="outline"
                     onClick={this.handleReportBug}
-                    disabled={isReporting}
+                    disabled={isReporting || false}
                     className="flex items-center space-x-1"
                   >
                     <BugAntIcon className="h-4 w-4" />
@@ -315,13 +313,17 @@ class ErrorBoundary extends Component<Props, State> {
                 {showReportButton && (
                   <Button
                     onClick={this.handleReportBug}
-                    disabled={isReporting || reportSent}
+                    disabled={(isReporting || reportSent) || false}
                     className="w-full flex items-center justify-center space-x-2"
-                    variant="ghost"
+                    variant="outline"
                   >
                     <BugAntIcon className="h-5 w-5" />
                     <span>
-                      {reportSent ? 'Bug Reported ✓' : isReporting ? 'Reporting...' : 'Report Bug'}
+                      {(() => {
+                        if (reportSent) {return 'Bug Reported ✓';}
+                        if (isReporting) {return 'Reporting...';}
+                        return 'Report Bug';
+                      })()}
                     </span>
                   </Button>
                 )}
@@ -355,7 +357,7 @@ class ErrorBoundary extends Component<Props, State> {
     )
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from './auth'
 import { logger } from './logger'
 import { Validator, ValidationError } from './validation'
-import { rateLimiter } from './security'
+import { rateLimit } from './security'
 import { z } from 'zod'
 
 // API Response types
@@ -41,7 +41,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 }
 
 // API Error types
-export class ApiError extends Error {
+export class KniApiError extends Error {
   public readonly statusCode: number
   public readonly code: string
   public readonly details?: any
@@ -53,7 +53,7 @@ export class ApiError extends Error {
     details?: any
   ) {
     super(message)
-    this.name = 'ApiError'
+    this.name = 'KniApiError'
     this.statusCode = statusCode
     this.code = code
     this.details = details
@@ -61,24 +61,24 @@ export class ApiError extends Error {
 }
 
 // Common API errors
-export const ApiErrors = {
+export const KniApiErrors = {
   BadRequest: (message: string = 'Bad request', details?: any) =>
-    new ApiError(message, 400, 'BAD_REQUEST', details),
+    new KniApiError(message, 400, 'BAD_REQUEST', details),
   
   Unauthorized: (message: string = 'Unauthorized') =>
-    new ApiError(message, 401, 'UNAUTHORIZED'),
+    new KniApiError(message, 401, 'UNAUTHORIZED'),
   
   Forbidden: (message: string = 'Forbidden') =>
-    new ApiError(message, 403, 'FORBIDDEN'),
+    new KniApiError(message, 403, 'FORBIDDEN'),
   
   NotFound: (message: string = 'Resource not found') =>
-    new ApiError(message, 404, 'NOT_FOUND'),
+    new KniApiError(message, 404, 'NOT_FOUND'),
   
   Conflict: (message: string = 'Resource conflict') =>
-    new ApiError(message, 409, 'CONFLICT'),
+    new KniApiError(message, 409, 'CONFLICT'),
   
   ValidationFailed: (errors: ValidationError[]) =>
-    new ApiError(
+    new KniApiError(
       'Validation failed',
       422,
       'VALIDATION_FAILED',
@@ -90,13 +90,13 @@ export const ApiErrors = {
     ),
   
   RateLimitExceeded: (message: string = 'Rate limit exceeded') =>
-    new ApiError(message, 429, 'RATE_LIMIT_EXCEEDED'),
+    new KniApiError(message, 429, 'RATE_LIMIT_EXCEEDED'),
   
   InternalError: (message: string = 'Internal server error') =>
-    new ApiError(message, 500, 'INTERNAL_ERROR'),
+    new KniApiError(message, 500, 'INTERNAL_ERROR'),
   
   ServiceUnavailable: (message: string = 'Service unavailable') =>
-    new ApiError(message, 503, 'SERVICE_UNAVAILABLE'),
+    new KniApiError(message, 503, 'SERVICE_UNAVAILABLE'),
 }
 
 // Response utilities
@@ -145,17 +145,17 @@ export class ApiResponse {
   }
 
   static error(
-    error: ApiError | Error | string,
+    error: KniApiError | Error | string,
     requestId?: string
   ): NextResponse<ApiResponse> {
-    let apiError: ApiError
-
-    if (error instanceof ApiError) {
+    let apiError: KniApiError
+    
+    if (error instanceof KniApiError) {
       apiError = error
     } else if (error instanceof Error) {
-      apiError = new ApiError(error.message)
+      apiError = new KniApiError(error.message)
     } else {
-      apiError = new ApiError(error)
+      apiError = new KniApiError(error)
     }
 
     const response: ApiResponse = {
@@ -167,7 +167,7 @@ export class ApiResponse {
       },
       meta: {
         timestamp: new Date().toISOString(),
-        requestId,
+        ...(requestId && { requestId }),
       },
     }
 
@@ -218,32 +218,31 @@ export function createApiHandler(
       // Create request context
       const context: RequestContext = {
         requestId,
-        ip: req.ip || req.headers.get('x-forwarded-for') || 'unknown',
+        ip: ApiUtils.getClientIp(req),
         userAgent: req.headers.get('user-agent') || 'unknown',
         method: req.method,
         path: req.nextUrl.pathname,
         timestamp: new Date(),
       }
 
-      // Log request
-      await logger.logApiRequest(
-        context.method,
-        context.path,
-        context.ip,
-        context.userAgent
-      )
+      // Log request start
+      await logger.info('API request started', {
+        requestId,
+        method: context.method,
+        path: context.path,
+        ip: context.ip,
+        userAgent: context.userAgent
+      })
 
       // Rate limiting
       if (options.rateLimit) {
-        const rateLimitKey = `${context.ip}:${context.path}`
-        const isAllowed = await rateLimiter.checkLimit(
-          rateLimitKey,
-          options.rateLimit.requests,
-          options.rateLimit.window
-        )
+        const rateLimitResult = await rateLimit({
+          maxRequests: options.rateLimit.requests,
+          windowMs: options.rateLimit.window
+        })(req)
 
-        if (!isAllowed) {
-          throw ApiErrors.RateLimitExceeded()
+        if (rateLimitResult) {
+          throw KniApiErrors.RateLimitExceeded()
         }
       }
 
@@ -252,24 +251,24 @@ export function createApiHandler(
         const session = await getServerSession(authOptions)
         
         if (!session?.user) {
-          throw ApiErrors.Unauthorized()
+          throw KniApiErrors.Unauthorized()
         }
 
         context.user = {
-          id: session.user.id,
+          id: (session.user as any).id,
           email: session.user.email!,
-          name: session.user.name || undefined,
-          role: (session.user as any).role || undefined,
+          ...(session.user.name && { name: session.user.name }),
+          ...((session.user as any).role && { role: (session.user as any).role }),
         }
 
         // Role-based access control
-        if (options.requiredRole && context.user.role !== options.requiredRole) {
-          throw ApiErrors.Forbidden('Insufficient permissions')
+        if (options.requiredRole && context.user?.role !== options.requiredRole) {
+          throw KniApiErrors.Forbidden('Insufficient permissions')
         }
       }
 
       // Validation
-      let validated: any = {}
+      const validated: any = {}
       
       if (options.validation) {
         // Validate body
@@ -278,7 +277,7 @@ export function createApiHandler(
           const result = await Validator.validate(options.validation.body, body)
           
           if (!result.success) {
-            throw ApiErrors.ValidationFailed(result.errors!)
+            throw KniApiErrors.ValidationFailed(result.errors!)
           }
           
           validated.body = result.data
@@ -290,7 +289,7 @@ export function createApiHandler(
           const result = await Validator.validate(options.validation.query, query)
           
           if (!result.success) {
-            throw ApiErrors.ValidationFailed(result.errors!)
+            throw KniApiErrors.ValidationFailed(result.errors!)
           }
           
           validated.query = result.data
@@ -301,7 +300,7 @@ export function createApiHandler(
           const result = await Validator.validate(options.validation.params, params)
           
           if (!result.success) {
-            throw ApiErrors.ValidationFailed(result.errors!)
+            throw KniApiErrors.ValidationFailed(result.errors!)
           }
           
           validated.params = result.data
@@ -391,7 +390,6 @@ export class ApiUtils {
     return (
       req.headers.get('x-forwarded-for')?.split(',')[0] ||
       req.headers.get('x-real-ip') ||
-      req.ip ||
       'unknown'
     )
   }
@@ -474,5 +472,5 @@ export function handleCors(req: NextRequest) {
 }
 
 // Export commonly used utilities
-export { ApiError, ApiErrors, ApiResponse as Response }
+export { ApiResponse as Response }
 export default createApiHandler

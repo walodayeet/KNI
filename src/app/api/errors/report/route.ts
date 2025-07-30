@@ -6,10 +6,7 @@ import { z } from 'zod'
 // Rate limiting for error reporting
 const errorReportLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 50 error reports per windowMs
-  message: 'Too many error reports from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
+  maxRequests: 50 // Limit each IP to 50 error reports per windowMs
 })
 
 // Validation schema for error reports
@@ -61,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Enhanced logging with structured data
     const logData = {
       ...errorReport,
-      clientIP: request.ip || 'unknown',
+      clientIP: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       headers: {
         'user-agent': request.headers.get('user-agent'),
         'referer': request.headers.get('referer'),
@@ -72,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the error with appropriate level
-    const severity = logData.severity
+    const {severity} = logData
     if (severity === 'critical') {
       logger.error('Critical client-side error reported', logData)
     } else if (severity === 'high') {

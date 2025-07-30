@@ -2,10 +2,10 @@ import { prisma } from '@/lib/db';
 import { hashPassword, verifyPassword, generateToken } from '@/lib/auth';
 import { RegisterInput, LoginInput } from '@/validators/auth';
 import { ConflictError, AuthenticationError, Logger } from '@/lib/errors';
-import { User, Role } from '@prisma/client';
+import { user, Role } from '@prisma/client';
 
 export interface AuthResult {
-  user: Omit<User, 'password'>;
+  user: Omit<user, 'password'>;
   token: string;
 }
 
@@ -138,7 +138,7 @@ export class AuthService {
   /**
    * Validate session and get user
    */
-  static async validateSession(token: string): Promise<Omit<User, 'password'> | null> {
+  static async validateSession(token: string): Promise<Omit<user, 'password'> | null> {
     try {
       // Find valid session
       const session = await prisma.session.findFirst({
@@ -190,7 +190,7 @@ export class AuthService {
   /**
    * Get user by ID
    */
-  static async getUserById(userId: number): Promise<Omit<User, 'password'> | null> {
+  static async getUserById(userId: string): Promise<Omit<user, 'password'> | null> {
     try {
       const user = await prisma.user.findUnique({
         where: { id: userId }
@@ -213,9 +213,9 @@ export class AuthService {
    * Update user profile
    */
   static async updateProfile(
-    userId: number,
+    userId: string,
     data: { name?: string; email?: string }
-  ): Promise<Omit<User, 'password'>> {
+  ): Promise<Omit<user, 'password'>> {
     Logger.info(`Profile update attempt for user ID: ${userId}`);
 
     // If email is being updated, check if it's already taken

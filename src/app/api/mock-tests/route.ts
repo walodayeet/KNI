@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error fetching mock tests:', error);
+    // Error fetching mock tests
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -105,6 +105,10 @@ export async function POST(request: NextRequest) {
     const mockTest = await prisma.mock_tests.create({
       data: {
         ...mockTestData,
+        description: mockTestData.description ?? null,
+        instructions: mockTestData.instructions ?? null,
+        target_user_type: mockTestData.target_user_type ?? null,
+        n8n_workflow_id: mockTestData.n8n_workflow_id ?? null,
         created_by_n8n: true
       }
     });
@@ -138,7 +142,7 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error creating mock test:', error);
+    // Error creating mock test
     
     // Log failed webhook
     try {
@@ -151,7 +155,7 @@ export async function POST(request: NextRequest) {
         }
       });
     } catch (logError) {
-      console.error('Failed to log webhook error:', logError);
+      // Failed to log webhook error
     }
 
     return NextResponse.json(
@@ -184,7 +188,7 @@ export async function PUT(request: NextRequest) {
       mockTest
     });
   } catch (error) {
-    console.error('Error updating mock test:', error);
+    // Error updating mock test
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

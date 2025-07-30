@@ -1,10 +1,9 @@
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 // Images are now referenced directly as strings in src attributes
 
 export default function Cta() {
   const t = useTranslations("HomePage");
-  const locale = useLocale();
 
   return (
     <section>

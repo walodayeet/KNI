@@ -1,11 +1,11 @@
 import { useTranslations } from "next-intl";
 import { FaPhone } from "react-icons/fa";
-import { IoMdMail } from "react-icons/io";
+
 import { AiFillTikTok } from "react-icons/ai";
 import { FaSquareFacebook } from "react-icons/fa6";
 import { FaSquareInstagram } from "react-icons/fa6";
 import {setRequestLocale} from 'next-intl/server';
-import { FaEnvelope, FaMapMarkerAlt, FaBuilding } from "react-icons/fa";
+import { FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
 import { use } from "react";
 
 export default function Contact({params} : any) {

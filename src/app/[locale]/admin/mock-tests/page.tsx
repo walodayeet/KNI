@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -210,7 +210,7 @@ export default function AdminMockTestsPage() {
   };
 
   const handleDeleteTest = async (testId: string) => {
-    if (!confirm('Are you sure you want to delete this test?')) return;
+    if (!confirm('Are you sure you want to delete this test?')) {return;}
 
     try {
       const response = await fetch(`/api/mock-tests/${testId}`, {
@@ -251,10 +251,10 @@ export default function AdminMockTestsPage() {
 
   const exportCodes = () => {
     const unusedCodes = premiumCodes.filter(code => !code.is_used);
-    const csvContent = 'Code,Created At,Expires At\n' + 
+    const csvContent = `Code,Created At,Expires At\n${  
       unusedCodes.map(code => 
         `${code.code},${code.created_at},${code.expires_at || 'Never'}`
-      ).join('\n');
+      ).join('\n')}`;
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -467,9 +467,9 @@ export default function AdminMockTestsPage() {
                           <SelectItem value="ARCHIVED">Archived</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
+                      <Button
+                        size="sm"
+                        variant="danger"
                         onClick={() => handleDeleteTest(test.id)}
                       >
                         <Trash2 className="w-4 h-4 mr-1" />

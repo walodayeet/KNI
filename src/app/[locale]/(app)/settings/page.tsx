@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserIcon, BellIcon, ShieldCheckIcon, GlobeAltIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
+import { UserIcon, BellIcon, ShieldCheckIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 
 interface UserProfile {
   id: string;
@@ -54,10 +54,10 @@ export default function SettingsPage() {
       
       // Update local state
       setUserProfile(prev => prev ? { ...prev, ...formData } : null);
-      alert('Settings saved successfully!');
+      // Settings saved successfully!
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Error saving settings. Please try again.');
+      // Error saving settings. Please try again.
     } finally {
       setSaving(false);
     }

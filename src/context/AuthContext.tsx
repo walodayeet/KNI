@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from '@/i18n/navigation';
 import { User, AuthState } from '@/types';
 import { AUTH_CONFIG, ERROR_MESSAGES } from '@/utils/constants';
-import { safeJsonParse } from '@/utils/helpers';
+
 
 interface AuthContextType extends AuthState {
   login: (token: string, user: User) => Promise<void>;
@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        // Error initializing auth
         setError(ERROR_MESSAGES.SESSION_EXPIRED);
         // Clear potentially corrupted data
         localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
@@ -127,7 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('testas_user');
       router.push('/login');
     } catch (error) {
-      console.error('Error during logout:', error);
+      // Error during logout
       // Force clear even if there's an error
       setUser(null);
       setError(null);

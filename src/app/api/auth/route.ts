@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/db';
 import { registerSchema, loginSchema } from '@/validators/auth';
-import { asyncHandler, ConflictError, AuthenticationError, RateLimitError, Logger, checkRateLimit } from '@/lib/errors';
+import { asyncHandler, ConflictError, AuthenticationError, RateLimitError, ValidationError, Logger, checkRateLimit } from '@/lib/errors';
 import { Role } from '@prisma/client';
 
-export const POST = asyncHandler(async (request: NextRequest) => {
+export const POST = asyncHandler(async (request: Request) => {
   const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
   
   // Rate limiting: 5 requests per minute per IP
@@ -16,7 +16,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
   }
 
   const body = await request.json();
-  const action = body.action;
+  const {action} = body;
 
   if (action === 'register') {
     const validatedData = registerSchema.parse(body);
@@ -38,7 +38,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
       data: {
         email: validatedData.email,
         password: hashedPassword,
-        name: validatedData.name,
+        name: validatedData.name || null,
         role: validatedData.role || Role.STUDENT
       }
     });
@@ -122,7 +122,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
       },
       token
     });
-  } else {
+  } 
     throw new ValidationError('Invalid action. Must be "login" or "register"');
-  }
+  
 });

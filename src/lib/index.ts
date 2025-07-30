@@ -8,7 +8,19 @@
 // Core utilities
 export * from './config'
 export * from './logger'
-export * from './errors'
+export {
+  AppError,
+  ValidationError,
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+  ConflictError,
+  RateLimitError,
+  handleError,
+  asyncHandler,
+  Logger,
+  checkRateLimit
+} from './errors'
 export * from './validation'
 
 // Database and data management
@@ -23,7 +35,15 @@ export * from './auth'
 export * from './security'
 
 // API and communication
-export * from './api'
+export {
+  ApiResponse,
+  PaginatedResponse,
+  RequestContext,
+  ApiHandlerOptions,
+  createApiHandler,
+  ApiUtils,
+  handleCors
+} from './api'
 export * from './external-api'
 export * from './webhooks'
 export * from './realtime'
@@ -75,13 +95,7 @@ export type {
   TransactionOptions,
 } from './database'
 
-export type {
-  // API types
-  ApiResponse,
-  PaginatedResponse,
-  RequestContext,
-  ApiHandlerOptions,
-} from './api'
+// API types are already exported above in the main export block
 
 export type {
   // Auth types
@@ -192,7 +206,7 @@ export const utils = {
     },
     
     truncate: (text: string, length: number, suffix = '...'): string => {
-      if (text.length <= length) return text
+      if (text.length <= length) {return text}
       return text.substring(0, length - suffix.length) + suffix
     },
     
@@ -275,10 +289,10 @@ export const utils = {
       const diffHours = Math.floor(diffMins / 60)
       const diffDays = Math.floor(diffHours / 24)
       
-      if (diffSecs < 60) return 'just now'
-      if (diffMins < 60) return `${diffMins}m ago`
-      if (diffHours < 24) return `${diffHours}h ago`
-      if (diffDays < 7) return `${diffDays}d ago`
+      if (diffSecs < 60) {return 'just now'}
+      if (diffMins < 60) {return `${diffMins}m ago`}
+      if (diffHours < 24) {return `${diffHours}h ago`}
+      if (diffDays < 7) {return `${diffDays}d ago`}
       return date.toLocaleDateString()
     },
   },
@@ -348,7 +362,7 @@ export const utils = {
         const sourceValue = (source as any)[key]
         const targetValue = (result as any)[key]
         
-        if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+        if (sourceValue !== null && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
           (result as any)[key] = utils.object.deepMerge(targetValue || {}, sourceValue)
         } else {
           (result as any)[key] = sourceValue
@@ -359,8 +373,8 @@ export const utils = {
     },
     
     isEmpty: (obj: any): boolean => {
-      if (obj == null) return true
-      if (Array.isArray(obj) || typeof obj === 'string') return obj.length === 0
+      if (obj === null || obj === undefined) {return true}
+      if (Array.isArray(obj) || typeof obj === 'string') {return obj.length === 0}
       return Object.keys(obj).length === 0
     },
     
@@ -527,7 +541,7 @@ export const utils = {
         }
       }
       
-      throw lastError!
+      throw new Error(lastError?.message || 'Retry failed')
     },
     
     parallel: async <T>(promises: Promise<T>[], concurrency = 5): Promise<T[]> => {
@@ -562,7 +576,7 @@ export const healthCheck = async (): Promise<{
       status: dbHealth.status,
       latency: dbHealth.latency,
     }
-    if (dbHealth.status === 'healthy') healthyCount++
+    if (dbHealth.status === 'healthy') {healthyCount++}
     totalCount++
   } catch (error) {
     results.database = {
@@ -619,9 +633,9 @@ export const initializeServices = async (): Promise<void> => {
     // Initialize other services
     // Most services are initialized on first use, but some may need explicit initialization
     
-    console.log('✅ All services initialized successfully')
+    // All services initialized successfully
   } catch (error) {
-    console.error('❌ Failed to initialize services:', error)
+    // Failed to initialize services
     throw error
   }
 }
@@ -632,18 +646,20 @@ export const shutdownServices = async (): Promise<void> => {
     // Shutdown services in reverse order
     await services.database.disconnect()
     
-    console.log('✅ All services shut down gracefully')
+    // All services shut down gracefully
   } catch (error) {
-    console.error('❌ Error during service shutdown:', error)
+    // Error during service shutdown
     throw error
   }
 }
 
 // Default export
-export default {
+const libExports = {
   services,
   utils,
   healthCheck,
   initializeServices,
   shutdownServices,
 }
+
+export default libExports

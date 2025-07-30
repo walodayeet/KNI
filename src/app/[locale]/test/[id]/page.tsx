@@ -1,22 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  CheckCircle,
+  AlertCircle,
   ArrowLeft, 
   ArrowRight,
   Flag,
-  BookOpen,
   Timer
 } from 'lucide-react';
 
@@ -86,6 +83,7 @@ export default function TestPage() {
       
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [timeRemaining, submitting]);
 
   // Save progress periodically
@@ -97,6 +95,7 @@ export default function TestPage() {
       
       return () => clearInterval(saveInterval);
     }
+    return undefined;
   }, [attempt, answers]);
 
   useEffect(() => {
@@ -143,7 +142,7 @@ export default function TestPage() {
   };
 
   const saveProgress = async () => {
-    if (!attempt || !user) return;
+    if (!attempt || !user) {return;}
 
     try {
       await fetch(`/api/mock-tests/${testId}/attempt`, {
@@ -178,7 +177,7 @@ export default function TestPage() {
   };
 
   const handleSubmitTest = async (autoSubmit = false) => {
-    if (!attempt || !user || submitting) return;
+    if (!attempt || !user || submitting) {return;}
 
     try {
       setSubmitting(true);
@@ -225,13 +224,13 @@ export default function TestPage() {
     const totalTime = mockTest ? mockTest.duration * 60 : 0;
     const percentage = (timeRemaining / totalTime) * 100;
     
-    if (percentage <= 10) return 'text-red-600';
-    if (percentage <= 25) return 'text-yellow-600';
+    if (percentage <= 10) {return 'text-red-600';}
+    if (percentage <= 25) {return 'text-yellow-600';}
     return 'text-green-600';
   };
 
   const getProgressPercentage = () => {
-    if (!mockTest) return 0;
+    if (!mockTest) {return 0;}
     return (Object.keys(answers).length / mockTest.total_questions) * 100;
   };
 
@@ -282,7 +281,7 @@ export default function TestPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 onClick={() => router.push('/dashboard')}
                 className="p-2"
               >
@@ -333,47 +332,51 @@ export default function TestPage() {
                     <CardTitle className="text-lg">
                       Question {currentQuestionIndex + 1}
                     </CardTitle>
-                    {currentQuestion.category && (
+                    {currentQuestion?.category && (
                       <CardDescription className="mt-1">
                         Category: {currentQuestion.category}
                       </CardDescription>
                     )}
                   </div>
-                  <Button
-                    variant={flaggedQuestions.has(currentQuestion.id) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleFlag(currentQuestion.id)}
-                  >
-                    <Flag className="w-4 h-4 mr-1" />
-                    {flaggedQuestions.has(currentQuestion.id) ? 'Flagged' : 'Flag'}
-                  </Button>
+                  {currentQuestion && (
+                    <Button
+                      variant={flaggedQuestions.has(currentQuestion.id) ? "primary" : "outline"}
+                      size="sm"
+                      onClick={() => toggleFlag(currentQuestion.id)}
+                    >
+                      <Flag className="w-4 h-4 mr-1" />
+                      {flaggedQuestions.has(currentQuestion.id) ? 'Flagged' : 'Flag'}
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <div className="text-lg leading-relaxed">
-                    {currentQuestion.question_text}
+                {currentQuestion && (
+                  <div className="space-y-6">
+                    <div className="text-lg leading-relaxed">
+                      {currentQuestion.question_text}
+                    </div>
+                    
+                    <RadioGroup
+                      value={answers[currentQuestion.id] || ''}
+                      onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+                      className="space-y-4"
+                    >
+                      {['A', 'B', 'C', 'D'].map((option) => {
+                        const optionText = currentQuestion[`option_${option.toLowerCase()}` as keyof Question] as string;
+                        return (
+                          <div key={option} className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <RadioGroupItem value={option} id={`option-${option}`} className="mt-1" />
+                            <Label htmlFor={`option-${option}`} className="flex-1 cursor-pointer text-base leading-relaxed">
+                              <span className="font-medium mr-2">{option}.</span>
+                              {optionText}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </RadioGroup>
                   </div>
-                  
-                  <RadioGroup
-                    value={answers[currentQuestion.id] || ''}
-                    onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-                    className="space-y-4"
-                  >
-                    {['A', 'B', 'C', 'D'].map((option) => {
-                      const optionText = currentQuestion[`option_${option.toLowerCase()}` as keyof Question] as string;
-                      return (
-                        <div key={option} className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                          <RadioGroupItem value={option} id={`option-${option}`} className="mt-1" />
-                          <Label htmlFor={`option-${option}`} className="flex-1 cursor-pointer text-base leading-relaxed">
-                            <span className="font-medium mr-2">{option}.</span>
-                            {optionText}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </RadioGroup>
-                </div>
+                )}
               </CardContent>
             </Card>
             

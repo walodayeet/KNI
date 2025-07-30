@@ -106,7 +106,7 @@ export async function POST(
       duration: mockTest.duration
     });
   } catch (error) {
-    console.error('Error starting test attempt:', error);
+    // Error starting test attempt
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -117,7 +117,7 @@ export async function POST(
 // PUT /api/mock-tests/[id]/attempt - Submit test attempt
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: _params }: { params: { id: string } }
 ) {
   try {
     const body = await request.json();
@@ -178,7 +178,7 @@ export async function PUT(
         where: { question_id: mtq.question.id },
         update: {
           total_attempts: { increment: 1 },
-          correct_attempts: isCorrect ? { increment: 1 } : undefined,
+          ...(isCorrect && { correct_attempts: { increment: 1 } }),
           last_updated: new Date()
         },
         create: {
@@ -201,7 +201,7 @@ export async function PUT(
         score,
         correct_answers: correctAnswers,
         percentage,
-        time_taken: timeTaken,
+        time_taken: timeTaken ?? null,
         completed_at: new Date(),
         answers
       }
@@ -234,7 +234,7 @@ export async function PUT(
 
     // Send webhook to n8n for evaluation
     try {
-      await fetch(process.env.N8N_WEBHOOK_URL + '/test-submitted', {
+      await fetch(`${process.env.N8N_WEBHOOK_URL  }/test-submitted`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -250,7 +250,7 @@ export async function PUT(
         })
       });
     } catch (webhookError) {
-      console.error('Failed to send webhook:', webhookError);
+      // Failed to send webhook
     }
 
     return NextResponse.json({
@@ -265,7 +265,7 @@ export async function PUT(
       }
     });
   } catch (error) {
-    console.error('Error submitting test attempt:', error);
+    // Error submitting test attempt
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,7 +1,4 @@
-import Header from "@/components/ui/header";
-import Footer from "@/components/ui/footer";
-
-import {NextIntlClientProvider, hasLocale, useMessages} from 'next-intl';
+import {NextIntlClientProvider, hasLocale} from 'next-intl';
 import {notFound} from 'next/navigation';
 import {routing} from '@/i18n/routing';
 import ClientLayout from './index'

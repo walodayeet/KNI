@@ -1,6 +1,5 @@
 import Redis from 'ioredis'
 import { logger } from './logger'
-import { z } from 'zod'
 import crypto from 'crypto'
 
 // Cache configuration
@@ -13,7 +12,6 @@ interface CacheConfig {
     db: number
     keyPrefix: string
     maxRetriesPerRequest: number
-    retryDelayOnFailover: number
     enableOfflineQueue: boolean
     lazyConnect: boolean
   }
@@ -34,11 +32,10 @@ const defaultConfig: CacheConfig = {
     enabled: process.env.REDIS_ENABLED === 'true',
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
+    ...(process.env.REDIS_PASSWORD && { password: process.env.REDIS_PASSWORD }),
     db: parseInt(process.env.REDIS_DB || '0'),
     keyPrefix: process.env.REDIS_KEY_PREFIX || 'kni:',
     maxRetriesPerRequest: 3,
-    retryDelayOnFailover: 100,
     enableOfflineQueue: false,
     lazyConnect: true,
   },
@@ -227,7 +224,7 @@ class MemoryCache {
 
   async exists(key: string): Promise<boolean> {
     const item = this.cache.get(key)
-    if (!item) return false
+    if (!item) {return false}
     
     // Check if expired
     if (Date.now() > item.createdAt + item.ttl * 1000) {
@@ -282,17 +279,16 @@ export class CacheManager {
   }
 
   private initializeRedis(): void {
-    if (!this.config.redis.enabled) return
+    if (!this.config.redis.enabled) {return}
 
     try {
       this.redis = new Redis({
         host: this.config.redis.host,
         port: this.config.redis.port,
-        password: this.config.redis.password,
+        ...(this.config.redis.password && { password: this.config.redis.password }),
         db: this.config.redis.db,
         keyPrefix: this.config.redis.keyPrefix,
         maxRetriesPerRequest: this.config.redis.maxRetriesPerRequest,
-        retryDelayOnFailover: this.config.redis.retryDelayOnFailover,
         enableOfflineQueue: this.config.redis.enableOfflineQueue,
         lazyConnect: this.config.redis.lazyConnect,
       })
@@ -323,7 +319,7 @@ export class CacheManager {
   }
 
   private decompressData(data: string, compressed: boolean): string {
-    if (!compressed) return data
+    if (!compressed) {return data}
     
     try {
       return Buffer.from(data, 'base64').toString('utf-8')
@@ -369,7 +365,10 @@ export class CacheManager {
             return value
           }
         } catch (error) {
-          await logger.warn('Redis get failed, falling back to memory cache', { key }, error instanceof Error ? error : new Error(String(error)))
+          await logger.warn('Redis get failed, falling back to memory cache', { 
+            key, 
+            error: error instanceof Error ? error.message : String(error) 
+          })
         }
       }
 
@@ -414,7 +413,10 @@ export class CacheManager {
           await multi.exec()
           success = true
         } catch (error) {
-          await logger.warn('Redis set failed, using memory cache only', { key }, error instanceof Error ? error : new Error(String(error)))
+          await logger.warn('Redis set failed, using memory cache only', { 
+            key, 
+            error: error instanceof Error ? error.message : String(error) 
+          })
         }
       }
 
@@ -457,7 +459,10 @@ export class CacheManager {
           const result = await this.redis.del(key)
           success = result > 0
         } catch (error) {
-          await logger.warn('Redis delete failed', { key }, error instanceof Error ? error : new Error(String(error)))
+          await logger.warn('Redis delete failed', { 
+            key, 
+            error: error instanceof Error ? error.message : String(error) 
+          })
         }
       }
 
@@ -491,9 +496,12 @@ export class CacheManager {
       if (this.redis) {
         try {
           const result = await this.redis.exists(key)
-          if (result > 0) return true
+          if (result > 0) {return true}
         } catch (error) {
-          await logger.warn('Redis exists check failed', { key }, error instanceof Error ? error : new Error(String(error)))
+          await logger.warn('Redis exists check failed', { 
+            key, 
+            error: error instanceof Error ? error.message : String(error) 
+          })
         }
       }
 
@@ -521,7 +529,9 @@ export class CacheManager {
           await this.redis.flushdb()
           success = true
         } catch (error) {
-          await logger.warn('Redis clear failed', {}, error instanceof Error ? error : new Error(String(error)))
+          await logger.warn('Redis clear failed', { 
+            error: error instanceof Error ? error.message : String(error) 
+          })
         }
       }
 
@@ -546,13 +556,13 @@ export class CacheManager {
   async invalidateByTag(tag: string): Promise<number> {
     try {
       const keys = this.tags.get(tag)
-      if (!keys || keys.size === 0) return 0
+      if (!keys || keys.size === 0) {return 0}
 
       let deletedCount = 0
       
       for (const key of keys) {
         const deleted = await this.delete(key)
-        if (deleted) deletedCount++
+        if (deleted) {deletedCount++}
       }
 
       this.tags.delete(tag)
@@ -605,7 +615,10 @@ export class CacheManager {
           }
           return result
         } catch (error) {
-          await logger.warn('Redis increment failed', { key }, error instanceof Error ? error : new Error(String(error)))
+          await logger.warn('Redis increment failed', { 
+            key, 
+            error: error instanceof Error ? error.message : String(error) 
+          })
         }
       }
 
@@ -631,7 +644,7 @@ export class CacheManager {
       sets: this.stats.sets + memoryStats.sets,
       deletes: this.stats.deletes + memoryStats.deletes,
       errors: this.stats.errors + memoryStats.errors,
-      memoryUsage: memoryStats.memoryUsage,
+      memoryUsage: memoryStats.memoryUsage ?? 0,
       redisConnected: this.redis?.status === 'ready',
     }
   }
@@ -649,19 +662,23 @@ export class CacheManager {
         await this.redis.ping()
         health.redis = true
       } catch (error) {
-        await logger.warn('Redis health check failed', {}, error instanceof Error ? error : new Error(String(error)))
+        await logger.warn('Redis health check failed', { 
+          error: error instanceof Error ? error.message : String(error) 
+        })
       }
     }
 
     // Check memory cache
     try {
-      const testKey = 'health-check-' + Date.now()
+      const testKey = `health-check-${  Date.now()}`
       await this.memoryCache.set(testKey, 'test', 1)
       const result = await this.memoryCache.get(testKey)
       health.memory = result === 'test'
       await this.memoryCache.delete(testKey)
     } catch (error) {
-      await logger.warn('Memory cache health check failed', {}, error instanceof Error ? error : new Error(String(error)))
+      await logger.warn('Memory cache health check failed', { 
+        error: error instanceof Error ? error.message : String(error) 
+      })
     }
 
     return health

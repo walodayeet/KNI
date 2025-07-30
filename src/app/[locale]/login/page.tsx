@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import Footer from '@/components/ui/footer';
 
 export default function LoginPage() {
@@ -175,7 +174,11 @@ export default function LoginPage() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   ) : null}
-                  {isLoading ? t('login.loading') : (isLogin ? t('login.submit') : t('register.submit'))}
+                  {(() => {
+                    if (isLoading) {return t('login.loading');}
+                    if (isLogin) {return t('login.submit');}
+                    return t('register.submit');
+                  })()}
                 </button>
               </div>
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { Logger } from '@/lib/errors';
 
@@ -28,7 +28,7 @@ interface HealthStatus {
   };
 }
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   const startTime = Date.now();
   
   try {
@@ -76,8 +76,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       checks: {
         database: {
           status: dbStatus,
-          responseTime: dbResponseTime,
-          error: dbError,
+          ...(dbResponseTime !== undefined && { responseTime: dbResponseTime }),
+          ...(dbError !== undefined && { error: dbError }),
         },
         memory: {
           status: memoryStatus,
@@ -94,7 +94,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     };
 
-    const statusCode = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
+    let statusCode: number;
+    if (overallStatus === 'healthy' || overallStatus === 'degraded') {
+      statusCode = 200;
+    } else {
+      statusCode = 503;
+    }
     
     Logger.info(`Health check completed in ${Date.now() - startTime}ms`, {
       status: overallStatus,
@@ -136,6 +141,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 // Simple ping endpoint for basic availability checks
-export async function HEAD(request: NextRequest): Promise<NextResponse> {
+export async function HEAD(): Promise<NextResponse> {
   return new NextResponse(null, { status: 200 });
 }

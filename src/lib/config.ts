@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import { logger } from './logger'
 import { EventEmitter } from 'events'
 import fs from 'fs/promises'
@@ -350,22 +349,9 @@ const appConfigSchema: ConfigSchema = {
   },
 }
 
-// Zod schemas for validation
-const configSourceSchema = z.object({
-  type: z.enum(['env', 'file', 'remote', 'vault', 'database']),
-  path: z.string().optional(),
-  url: z.string().optional(),
-  priority: z.number(),
-  watch: z.boolean().optional(),
-  format: z.enum(['json', 'yaml', 'toml', 'ini']).optional(),
-})
+// Configuration loader utilities
 
-const configEnvironmentSchema = z.object({
-  name: z.string(),
-  sources: z.array(configSourceSchema),
-  schema: z.record(z.any()),
-  overrides: z.record(z.any()).optional(),
-})
+
 
 // Configuration loader utilities
 class ConfigLoader {
@@ -406,7 +392,7 @@ class ConfigLoader {
 
   static async loadFromRemote(url: string, headers?: Record<string, string>): Promise<any> {
     try {
-      const response = await fetch(url, { headers })
+      const response = await fetch(url, headers ? { headers } : {})
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
@@ -417,7 +403,7 @@ class ConfigLoader {
   }
 
   private static parseEnvValue(value: string | undefined): any {
-    if (!value) return undefined
+    if (!value) {return undefined}
 
     // Try to parse as JSON
     if (value.startsWith('{') || value.startsWith('[')) {
@@ -429,12 +415,12 @@ class ConfigLoader {
     }
 
     // Parse boolean
-    if (value.toLowerCase() === 'true') return true
-    if (value.toLowerCase() === 'false') return false
+    if (value.toLowerCase() === 'true') {return true}
+    if (value.toLowerCase() === 'false') {return false}
 
     // Parse number
-    if (/^\d+$/.test(value)) return parseInt(value, 10)
-    if (/^\d*\.\d+$/.test(value)) return parseFloat(value)
+    if (/^\d+$/.test(value)) {return parseInt(value, 10)}
+    if (/^\d*\.\d+$/.test(value)) {return parseFloat(value)}
 
     return value
   }
@@ -461,7 +447,7 @@ class ConfigValidator {
 
       // Check deprecated fields
       if (definition.deprecated) {
-        warnings.push(`Field '${key}' is deprecated${definition.deprecationMessage ? ': ' + definition.deprecationMessage : ''}`)
+        warnings.push(`Field '${key}' is deprecated${definition.deprecationMessage ? `: ${  definition.deprecationMessage}` : ''}`)
       }
 
       // Type validation
@@ -620,11 +606,11 @@ export class ConfigManager extends EventEmitter {
             config = await ConfigLoader.loadFromEnv()
             break
           case 'file':
-            if (!source.path) throw new Error('File path is required for file source')
+            if (!source.path) {throw new Error('File path is required for file source')}
             config = await ConfigLoader.loadFromFile(source.path, source.format)
             break
           case 'remote':
-            if (!source.url) throw new Error('URL is required for remote source')
+            if (!source.url) {throw new Error('URL is required for remote source')}
             config = await ConfigLoader.loadFromRemote(source.url)
             break
           default:

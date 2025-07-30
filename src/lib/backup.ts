@@ -1,5 +1,4 @@
 import { logger } from './logger'
-import { CacheService } from './cache'
 import { z } from 'zod'
 import { createHash } from 'crypto'
 import { promises as fs } from 'fs'
@@ -75,10 +74,10 @@ const defaultConfig: BackupConfig = {
       bucket: process.env.BACKUP_CLOUD_BUCKET || '',
       region: process.env.BACKUP_CLOUD_REGION || 'us-east-1',
       credentials: {
-        accessKey: process.env.BACKUP_CLOUD_ACCESS_KEY,
-        secretKey: process.env.BACKUP_CLOUD_SECRET_KEY,
-        projectId: process.env.BACKUP_CLOUD_PROJECT_ID,
-        keyFile: process.env.BACKUP_CLOUD_KEY_FILE,
+        ...(process.env.BACKUP_CLOUD_ACCESS_KEY && { accessKey: process.env.BACKUP_CLOUD_ACCESS_KEY }),
+        ...(process.env.BACKUP_CLOUD_SECRET_KEY && { secretKey: process.env.BACKUP_CLOUD_SECRET_KEY }),
+        ...(process.env.BACKUP_CLOUD_PROJECT_ID && { projectId: process.env.BACKUP_CLOUD_PROJECT_ID }),
+        ...(process.env.BACKUP_CLOUD_KEY_FILE && { keyFile: process.env.BACKUP_CLOUD_KEY_FILE }),
       },
     },
     remote: {
@@ -483,8 +482,8 @@ export class CompressionUtils {
           const zlib = await import('zlib')
           return new Promise((resolve, reject) => {
             zlib.gzip(data, { level }, (err, result) => {
-              if (err) reject(err)
-              else resolve(result)
+              if (err) {reject(err)}
+              else {resolve(result)}
             })
           })
         }
@@ -496,8 +495,8 @@ export class CompressionUtils {
                 [zlib.constants.BROTLI_PARAM_QUALITY]: level,
               },
             }, (err, result) => {
-              if (err) reject(err)
-              else resolve(result)
+              if (err) {reject(err)}
+              else {resolve(result)}
             })
           })
         }
@@ -528,8 +527,8 @@ export class CompressionUtils {
           const zlib = await import('zlib')
           return new Promise((resolve, reject) => {
             zlib.gunzip(data, (err, result) => {
-              if (err) reject(err)
-              else resolve(result)
+              if (err) {reject(err)}
+              else {resolve(result)}
             })
           })
         }
@@ -537,8 +536,8 @@ export class CompressionUtils {
           const zlib = await import('zlib')
           return new Promise((resolve, reject) => {
             zlib.brotliDecompress(data, (err, result) => {
-              if (err) reject(err)
-              else resolve(result)
+              if (err) {reject(err)}
+              else {resolve(result)}
             })
           })
         }
@@ -580,8 +579,10 @@ export class EncryptionUtils {
         : crypto.scryptSync(password, salt, 32)
       
       // Create cipher
-      const cipher = crypto.createCipher(algorithm, key)
-      cipher.setAAD ? cipher.setAAD(Buffer.from('backup-data')) : null
+      const cipher = crypto.createCipheriv(algorithm, key, iv)
+      if (algorithm === 'aes-256-gcm') {
+        (cipher as any).setAAD(Buffer.from('backup-data'))
+      }
       
       // Encrypt data
       const encrypted = Buffer.concat([
@@ -590,7 +591,7 @@ export class EncryptionUtils {
       ])
       
       // Get authentication tag for GCM
-      const tag = algorithm === 'aes-256-gcm' ? cipher.getAuthTag() : undefined
+      const tag = algorithm === 'aes-256-gcm' ? (cipher as any).getAuthTag() : undefined
       
       return { encrypted, iv, salt, tag }
     } catch (error) {
@@ -624,12 +625,12 @@ export class EncryptionUtils {
         : crypto.scryptSync(password, salt, 32)
       
       // Create decipher
-      const decipher = crypto.createDecipher(algorithm, key)
+      const decipher = crypto.createDecipheriv(algorithm, key, iv)
       
       if (algorithm === 'aes-256-gcm') {
-        if (!tag) throw new Error('Authentication tag required for GCM mode')
-        decipher.setAuthTag(tag)
-        decipher.setAAD ? decipher.setAAD(Buffer.from('backup-data')) : null
+        if (!tag) {throw Error('Authentication tag required for GCM mode')
+        ;}(decipher as any).setAuthTag(tag)
+        ;(decipher as any).setAAD(Buffer.from('backup-data'))
       }
       
       // Decrypt data
@@ -657,7 +658,6 @@ export class BackupManager {
   private static instance: BackupManager
   private config: BackupConfig
   private storageProviders: Map<string, StorageProvider> = new Map()
-  private activeJobs: Map<string, BackupJob> = new Map()
   private activeRestores: Map<string, RestoreJob> = new Map()
 
   private constructor(config: Partial<BackupConfig> = {}) {
@@ -720,7 +720,13 @@ export class BackupManager {
         size: 0,
         checksum: '',
         createdAt: new Date(),
-        source: job.source,
+        source: {
+          database: job.source.database?.enabled || false,
+          files: job.source.files?.enabled || false,
+          uploads: job.source.uploads?.enabled || false,
+          config: job.source.config?.enabled || false,
+          logs: job.source.logs?.enabled || false,
+        },
         storage: {},
         verification: {
           checksum: '',
@@ -728,7 +734,7 @@ export class BackupManager {
           verified: false,
         },
         tags: options.tags || [],
-        description: options.description,
+        ...(options.description && { description: options.description }),
         createdBy: 'system', // Should be passed from context
       }
 
@@ -779,7 +785,7 @@ export class BackupManager {
         }
 
         processedData = Buffer.concat([
-          Buffer.from(JSON.stringify(encryptionMeta) + '\n'),
+          Buffer.from(`${JSON.stringify(encryptionMeta)  }\n`),
           encrypted.encrypted,
         ])
 
@@ -844,7 +850,7 @@ export class BackupManager {
   }
 
   // Collect backup data
-  private async collectBackupData(job: BackupJob): Promise<Buffer> {
+  private async collectBackupData(job: Omit<BackupJob, 'id' | 'createdAt' | 'updatedAt'>): Promise<Buffer> {
     const data: Record<string, any> = {}
 
     try {
@@ -1040,12 +1046,12 @@ export class BackupManager {
     try {
       const key = `${backupId}.backup`
       
-      for (const [providerName, provider] of this.storageProviders) {
+      for (const [_providerName, provider] of this.storageProviders) {
         const exists = await provider.exists(key)
         if (!exists) {
           await logger.error('Backup verification failed - file not found', {
             backupId,
-            provider: providerName,
+            provider: _providerName,
           })
           return false
         }
@@ -1104,7 +1110,7 @@ export class BackupManager {
       createBackup?: boolean
       validateIntegrity?: boolean
       dryRun?: boolean
-    } = {}
+    } = { target: {} }
   ): Promise<RestoreJob> {
     const restoreId = this.generateId()
     
@@ -1286,6 +1292,9 @@ export class BackupManager {
 
       // Extract encryption metadata
       const lines = data.toString().split('\n')
+      if (!lines[0]) {
+        throw new Error('Invalid encrypted backup format: missing metadata')
+      }
       const encryptionMeta = JSON.parse(lines[0])
       const encryptedData = Buffer.from(lines.slice(1).join('\n'))
 
@@ -1377,7 +1386,7 @@ export class BackupManager {
   }
 
   // Restore logs
-  private async restoreLogs(logsData: any): Promise<void> {
+  private async restoreLogs(_logsData: any): Promise<void> {
     // This would restore logs
     await logger.info('Logs restore completed')
   }
@@ -1416,14 +1425,14 @@ export class BackupManager {
       
       let success = true
       
-      for (const [providerName, provider] of this.storageProviders) {
+      for (const [_providerName, provider] of this.storageProviders) {
         try {
           await provider.delete(key)
           await provider.delete(metadataKey)
         } catch (error) {
           await logger.error('Failed to delete backup from provider', {
             backupId,
-            provider: providerName,
+            provider: _providerName,
             error: error instanceof Error ? error.message : String(error),
           })
           success = false
@@ -1449,7 +1458,7 @@ export class BackupManager {
     try {
       const metadataKey = `${backupId}.meta`
       
-      for (const [providerName, provider] of this.storageProviders) {
+      for (const [_providerName, provider] of this.storageProviders) {
         try {
           const metadataBuffer = await provider.download(metadataKey)
           const metadata = JSON.parse(metadataBuffer.toString())

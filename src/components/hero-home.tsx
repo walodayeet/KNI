@@ -1,11 +1,10 @@
 import { Link } from "@/i18n/navigation";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 // Images are now referenced directly as strings in src attributes
 import KNILogo from "./ui/logo";
 
 export default function HeroHome() {
   const t = useTranslations("HomePage");
-  const locale = useLocale();
 
   return (
     <section className="relative min-h-screen flex items-center bg-white">

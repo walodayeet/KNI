@@ -263,7 +263,6 @@ class WebhookStepExecutor extends StepExecutor {
 export class WorkflowEngine extends EventEmitter {
   private static instance: WorkflowEngine
   private config: WorkflowConfig
-  private cache: CacheService
   private queueManager: QueueManager
   private workflows: Map<string, WorkflowDefinition> = new Map()
   private instances: Map<string, WorkflowInstance> = new Map()
@@ -274,7 +273,6 @@ export class WorkflowEngine extends EventEmitter {
   private constructor(config: Partial<WorkflowConfig> = {}) {
     super()
     this.config = { ...defaultWorkflowConfig, ...config }
-    this.cache = new CacheService()
     this.queueManager = QueueManager.getInstance()
     this.metrics = {
       totalWorkflows: 0,
@@ -324,7 +322,7 @@ export class WorkflowEngine extends EventEmitter {
     this.metrics.totalWorkflows++
 
     if (this.config.enablePersistence) {
-      await this.cache.set(`workflow:${workflow.id}`, workflow)
+      await CacheService.set(`workflow:${workflow.id}`, workflow)
     }
 
     await logger.info('Workflow registered', {
@@ -442,7 +440,7 @@ export class WorkflowEngine extends EventEmitter {
       
       // Persist instance if enabled
       if (this.config.enablePersistence) {
-        await this.cache.set(`workflow_instance:${instanceId}`, instance)
+        await CacheService.set(`workflow_instance:${instanceId}`, instance)
       }
 
       this.emit('workflow:completed', instance)
@@ -658,7 +656,7 @@ export class WorkflowEngine extends EventEmitter {
     for (const instanceId of toDelete) {
       this.instances.delete(instanceId)
       if (this.config.enablePersistence) {
-        await this.cache.delete(`workflow_instance:${instanceId}`)
+        await CacheService.delete(`workflow_instance:${instanceId}`)
       }
     }
 

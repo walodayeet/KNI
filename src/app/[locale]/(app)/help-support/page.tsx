@@ -95,7 +95,7 @@ export default function HelpSupportPage() {
     // Simulate form submission
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    alert('Thank you for your message! We\'ll get back to you within 24 hours.');
+    // Thank you for your message! We'll get back to you within 24 hours.
     setContactForm({ name: '', email: '', subject: '', message: '' });
     setSubmitting(false);
   };

@@ -6,10 +6,7 @@ import { z } from 'zod'
 // Rate limiting for user bug reports
 const userReportLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 user reports per windowMs
-  message: 'Too many bug reports from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
+  maxRequests: 10 // Limit each IP to 10 user reports per windowMs
 })
 
 // Validation schema for user bug reports
@@ -64,7 +61,7 @@ export async function POST(request: NextRequest) {
     const reportData = {
       ...userReport,
       reportId: `user_report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      clientIP: request.ip || 'unknown',
+      clientIP: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       headers: {
         'user-agent': request.headers.get('user-agent'),
         'referer': request.headers.get('referer'),
@@ -85,7 +82,7 @@ export async function POST(request: NextRequest) {
     await notifyDevelopmentTeam(reportData)
 
     // Generate ticket ID for user reference
-    const ticketId = generateTicketId(reportData.reportId)
+    const ticketId = generateTicketId()
 
     return NextResponse.json(
       { 
@@ -175,7 +172,7 @@ async function notifyDevelopmentTeam(reportData: any): Promise<void> {
     const notification = {
       type: 'user_bug_report',
       reportId: reportData.reportId,
-      ticketId: generateTicketId(reportData.reportId),
+      ticketId: generateTicketId(),
       priority: reportData.priority,
       summary: reportData.userFeedback.substring(0, 100) + (reportData.userFeedback.length > 100 ? '...' : ''),
       url: reportData.url,
@@ -207,7 +204,7 @@ async function notifyDevelopmentTeam(reportData: any): Promise<void> {
   }
 }
 
-function generateTicketId(reportId: string): string {
+function generateTicketId(): string {
   // Generate a human-readable ticket ID
   const timestamp = Date.now().toString(36).toUpperCase()
   const random = Math.random().toString(36).substr(2, 4).toUpperCase()

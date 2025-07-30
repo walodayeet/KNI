@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { logger } from './logger'
 import { CacheService } from './cache'
 import { EventEmitter } from 'events'
-import { format, subDays, subMonths, subYears, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
+import { format, subDays } from 'date-fns'
 import ExcelJS from 'exceljs'
 import PDFDocument from 'pdfkit'
 import { createCanvas } from 'canvas'
@@ -372,9 +372,9 @@ class DataAggregator {
           case 'between':
             return value >= filter.values?.[0] && value <= filter.values?.[1]
           case 'is_null':
-            return value == null
+            return value === null || value === undefined
           case 'is_not_null':
-            return value != null
+            return value !== null && value !== undefined
           default:
             return true
         }
@@ -387,8 +387,8 @@ class DataAggregator {
       const aValue = a[field]
       const bValue = b[field]
       
-      if (aValue < bValue) return direction === 'asc' ? -1 : 1
-      if (aValue > bValue) return direction === 'asc' ? 1 : -1
+      if (aValue < bValue) {return direction === 'asc' ? -1 : 1}
+      if (aValue > bValue) {return direction === 'asc' ? 1 : -1}
       return 0
     })
   }

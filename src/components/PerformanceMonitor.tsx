@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { logger } from '@/lib/logger'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { ChartBarIcon, ClockIcon, CpuChipIcon, SignalIcon } from '@heroicons/react/24/outline'
 
 interface PerformanceMetrics {
@@ -35,10 +35,10 @@ interface PerformanceMonitorProps {
   reportInterval?: number // in milliseconds
   onMetricsUpdate?: (metrics: PerformanceMetrics) => void
   thresholds?: {
-    lcp?: number
-    fid?: number
-    cls?: number
-    memoryUsage?: number
+    lcp: number
+    fid: number
+    cls: number
+    memoryUsage: number
   }
 }
 
@@ -59,11 +59,11 @@ export default function PerformanceMonitor({
   const [metrics, setMetrics] = useState<PerformanceMetrics>({})
   const [isVisible, setIsVisible] = useState(false)
   const [alerts, setAlerts] = useState<string[]>([])
-  const intervalRef = useRef<NodeJS.Timeout>()
-  const observerRef = useRef<PerformanceObserver>()
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const observerRef = useRef<PerformanceObserver | null>(null)
 
   const collectMetrics = useCallback(async () => {
-    if (!enabled || typeof window === 'undefined') return
+    if (!enabled || typeof window === 'undefined') {return}
 
     try {
       const newMetrics: PerformanceMetrics = {}
@@ -78,7 +78,7 @@ export default function PerformanceMonitor({
 
       // Memory usage (if available)
       if ('memory' in performance) {
-        const memory = (performance as any).memory
+        const {memory} = (performance as any)
         newMetrics.memoryUsage = {
           used: memory.usedJSHeapSize,
           total: memory.totalJSHeapSize,
@@ -88,7 +88,7 @@ export default function PerformanceMonitor({
 
       // Network information (if available)
       if ('connection' in navigator) {
-        const connection = (navigator as any).connection
+        const {connection} = (navigator as any)
         newMetrics.connectionType = connection.type
         newMetrics.effectiveType = connection.effectiveType
       }
@@ -117,14 +117,14 @@ export default function PerformanceMonitor({
   }, [enabled, onMetricsUpdate, thresholds])
 
   const setupWebVitalsObserver = useCallback(() => {
-    if (!enabled || typeof window === 'undefined' || !('PerformanceObserver' in window)) return
+    if (!enabled || typeof window === 'undefined' || !('PerformanceObserver' in window)) {return}
 
     try {
       // Observe Core Web Vitals
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           const metricName = entry.name
-          const value = entry.value || (entry as any).processingStart
+          const value = (entry as any).value || (entry as any).processingStart
 
           setMetrics(prev => ({
             ...prev,
@@ -180,7 +180,7 @@ export default function PerformanceMonitor({
   }, [])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {return}
 
     // Initial metrics collection
     collectMetrics()
@@ -200,16 +200,16 @@ export default function PerformanceMonitor({
   }, [enabled, collectMetrics, setupWebVitalsObserver, reportInterval])
 
   const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
+    if (bytes === 0) {return '0 Bytes'}
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))  } ${  sizes[i]}`
   }
 
   const getScoreColor = (score: number): string => {
-    if (score >= 90) return 'text-green-600'
-    if (score >= 70) return 'text-yellow-600'
+    if (score >= 90) {return 'text-green-600'}
+    if (score >= 70) {return 'text-yellow-600'}
     return 'text-red-600'
   }
 
@@ -235,7 +235,6 @@ export default function PerformanceMonitor({
           onClick={() => setIsVisible(!isVisible)}
           className="rounded-full p-3 shadow-lg"
           variant="outline"
-          title="Performance Monitor"
         >
           <ChartBarIcon className="h-5 w-5" />
           {alerts.length > 0 && (
@@ -255,7 +254,7 @@ export default function PerformanceMonitor({
               </h3>
               <Button
                 onClick={() => setIsVisible(false)}
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 className="p-1"
               >
@@ -399,7 +398,7 @@ export default function PerformanceMonitor({
                   navigator.clipboard.writeText(JSON.stringify(metrics, null, 2))
                 }}
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 className="flex-1"
               >
                 Copy Data
@@ -419,32 +418,32 @@ function calculatePerformanceScore(metrics: PerformanceMetrics): number {
   // LCP scoring (0-40 points)
   if (metrics.lcp) {
     factors++
-    if (metrics.lcp > 4000) score -= 40
-    else if (metrics.lcp > 2500) score -= 20
-    else if (metrics.lcp > 1200) score -= 10
+    if (metrics.lcp > 4000) {score -= 40}
+    else if (metrics.lcp > 2500) {score -= 20}
+    else if (metrics.lcp > 1200) {score -= 10}
   }
 
   // FID scoring (0-30 points)
   if (metrics.fid) {
     factors++
-    if (metrics.fid > 300) score -= 30
-    else if (metrics.fid > 100) score -= 15
-    else if (metrics.fid > 50) score -= 5
+    if (metrics.fid > 300) {score -= 30}
+    else if (metrics.fid > 100) {score -= 15}
+    else if (metrics.fid > 50) {score -= 5}
   }
 
   // CLS scoring (0-20 points)
   if (metrics.cls) {
     factors++
-    if (metrics.cls > 0.25) score -= 20
-    else if (metrics.cls > 0.1) score -= 10
-    else if (metrics.cls > 0.05) score -= 5
+    if (metrics.cls > 0.25) {score -= 20}
+    else if (metrics.cls > 0.1) {score -= 10}
+    else if (metrics.cls > 0.05) {score -= 5}
   }
 
   // Memory usage scoring (0-10 points)
   if (metrics.memoryUsage) {
     factors++
-    if (metrics.memoryUsage.percentage > 90) score -= 10
-    else if (metrics.memoryUsage.percentage > 80) score -= 5
+    if (metrics.memoryUsage.percentage > 90) {score -= 10}
+    else if (metrics.memoryUsage.percentage > 80) {score -= 5}
   }
 
   return Math.max(0, Math.min(100, score))
@@ -486,7 +485,7 @@ function getWebVitalRating(metric: string, value: number): 'good' | 'needs-impro
 
   const [good, poor] = thresholds[metric] || [0, 0]
   
-  if (value <= good) return 'good'
-  if (value <= poor) return 'needs-improvement'
+  if (value <= good) {return 'good'}
+  if (value <= poor) {return 'needs-improvement'}
   return 'poor'
 }

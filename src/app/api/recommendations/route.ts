@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     const recommendation = await prisma.daily_recommendations.create({
       data: {
         ...validatedData,
+        n8n_workflow_id: validatedData.n8n_workflow_id || null,
         generated_by_n8n: true
       }
     });
@@ -170,7 +171,7 @@ export async function PUT(request: NextRequest) {
     const recommendation = await prisma.daily_recommendations.findFirst({
       where: {
         id: recommendation_id,
-        user_id: user_id
+        user_id
       }
     });
 
@@ -196,7 +197,7 @@ export async function PUT(request: NextRequest) {
 
     // Send webhook to n8n for tracking
     try {
-      await fetch(process.env.N8N_WEBHOOK_URL + '/recommendation-completed', {
+      await fetch(`${process.env.N8N_WEBHOOK_URL  }/recommendation-completed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

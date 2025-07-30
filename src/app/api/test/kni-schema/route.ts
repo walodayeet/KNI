@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    console.log('🔍 Testing KNI schema connection...');
+    // Testing KNI schema connection...
 
     // Test basic database connection
     await prisma.$queryRaw`SELECT 1 as test`;
-    console.log('✅ Database connection successful');
+    // Database connection successful
 
     // Get schema information
     const schemaInfo = await prisma.$queryRaw`
@@ -58,35 +58,35 @@ export async function GET(request: NextRequest) {
       const userCount = await prisma.user.count();
       coreTableTests.users = userCount;
     } catch (error) {
-      console.warn('Could not count users:', error);
+      // Could not count users
     }
 
     try {
       const sessionCount = await prisma.session.count();
       coreTableTests.sessions = sessionCount;
     } catch (error) {
-      console.warn('Could not count sessions:', error);
+      // Could not count sessions
     }
 
     try {
       const questionCount = await prisma.test_questions.count();
       coreTableTests.test_questions = questionCount;
     } catch (error) {
-      console.warn('Could not count test_questions:', error);
+      // Could not count test_questions
     }
 
     try {
       const templateCount = await prisma.test_templates.count();
       coreTableTests.test_templates = templateCount;
     } catch (error) {
-      console.warn('Could not count test_templates:', error);
+      // Could not count test_templates
     }
 
     try {
       const resultCount = await prisma.test_results.count();
       coreTableTests.test_results = resultCount;
     } catch (error) {
-      console.warn('Could not count test_results:', error);
+      // Could not count test_results
     }
 
     // Test a sample query on test_questions if it has data
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
           }
         });
       } catch (error) {
-        console.warn('Could not fetch sample question:', error);
+        // Could not fetch sample question
       }
     }
 
@@ -127,11 +127,11 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    console.log('✅ KNI schema test completed successfully');
+    // KNI schema test completed successfully
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('❌ KNI schema test failed:', error);
+    // KNI schema test failed
     
     return NextResponse.json(
       {
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Failed to create test question:', error);
+    // Failed to create test question
     
     return NextResponse.json(
       {

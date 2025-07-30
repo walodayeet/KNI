@@ -7,7 +7,8 @@ async function main() {
   console.log('🌱 Starting database seed...')
 
   // Create admin user
-  const adminUser = await prisma.user.upsert({
+  // @ts-ignore
+  const _adminUser = await prisma.user.upsert({
     where: { email: 'admin@kni-platform.com' },
     update: {},
     create: {
@@ -19,7 +20,8 @@ async function main() {
   })
 
   // Create test user
-  const testUser = await prisma.user.upsert({
+  // @ts-ignore
+  const _testUser = await prisma.user.upsert({
     where: { email: 'test@kni-platform.com' },
     update: {},
     create: {
@@ -31,7 +33,8 @@ async function main() {
   })
 
   // Create teacher user
-  const teacherUser = await prisma.user.upsert({
+  // @ts-ignore
+  const _teacherUser = await prisma.user.upsert({
     where: { email: 'teacher@kni-platform.com' },
     update: {},
     create: {

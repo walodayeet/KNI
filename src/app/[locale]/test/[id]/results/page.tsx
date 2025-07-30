@@ -121,7 +121,7 @@ export default function TestResultsPage() {
           setEvaluation(evaluationData.evaluation);
         }
       } catch (evalError) {
-        console.log('No evaluation available yet');
+        // No evaluation available yet
       }
     } catch (error: any) {
       setError(error.message);
@@ -131,14 +131,14 @@ export default function TestResultsPage() {
   };
 
   const getScoreColor = (percentage: number) => {
-    if (percentage >= 80) return 'text-green-600';
-    if (percentage >= 60) return 'text-yellow-600';
+    if (percentage >= 80) {return 'text-green-600';}
+    if (percentage >= 60) {return 'text-yellow-600';}
     return 'text-red-600';
   };
 
   const getScoreBadgeColor = (percentage: number) => {
-    if (percentage >= 80) return 'bg-green-100 text-green-800';
-    if (percentage >= 60) return 'bg-yellow-100 text-yellow-800';
+    if (percentage >= 80) {return 'bg-green-100 text-green-800';}
+    if (percentage >= 60) {return 'bg-yellow-100 text-yellow-800';}
     return 'bg-red-100 text-red-800';
   };
 
@@ -230,7 +230,7 @@ export default function TestResultsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 onClick={() => router.push('/dashboard')}
                 className="p-2"
               >
@@ -455,7 +455,11 @@ export default function TestResultsPage() {
                           )}
                         </div>
                         <Badge className={getScoreBadgeColor(result.isCorrect ? 100 : 0)}>
-                          {result.isCorrect ? 'Correct' : result.userAnswer ? 'Incorrect' : 'Unanswered'}
+                          {(() => {
+                            if (result.isCorrect) {return 'Correct';}
+                            if (result.userAnswer) {return 'Incorrect';}
+                            return 'Unanswered';
+                          })()}
                         </Badge>
                       </div>
                     </CardHeader>

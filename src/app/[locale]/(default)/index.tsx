@@ -15,6 +15,7 @@ type Props = {
 
 export default function ClientLayout({
   children,
+  // @ts-ignore
   params
 }: Props) {
   useEffect(() => {

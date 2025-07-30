@@ -23,8 +23,7 @@ const AnalyticsBatchSchema = z.object({
 // Rate limiting configuration
 const analyticsRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
-  message: 'Too many analytics requests',
+  maxRequests: 100, // 100 requests per minute
 })
 
 // Event processing functions
@@ -49,7 +48,7 @@ function sanitizeProperties(properties: Record<string, any>): Record<string, any
     
     // Limit string length
     if (typeof value === 'string' && value.length > 1000) {
-      sanitized[key] = value.substring(0, 1000) + '...'
+      sanitized[key] = `${value.substring(0, 1000)  }...`
     } else {
       sanitized[key] = value
     }
@@ -121,7 +120,7 @@ function anonymizeIP(ip: string): string {
   // For IPv6, remove last 64 bits
   if (ip.includes(':')) {
     const parts = ip.split(':')
-    return parts.slice(0, 4).join(':') + '::'
+    return `${parts.slice(0, 4).join(':')  }::`
   }
   
   return 'unknown'

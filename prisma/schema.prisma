@@ -41,6 +41,23 @@ enum TestStatus {
   @@schema("kni")
 }
 
+enum ResourceType {
+  PDF
+  VIDEO
+  DOCUMENT
+  LINK
+
+  @@schema("kni")
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+
+  @@schema("kni")
+}
+
 model user {
   id                    String                  @id @default(cuid())
   email                 String                  @unique
@@ -61,6 +78,7 @@ model user {
   premium_codes         premium_codes[]         @relation("RedeemedBy")
   mock_test_attempts    mock_test_attempts[]
   weekly_assignments    weekly_assignments[]
+  file_uploads          file_uploads[]
 
   @@map("users")
   @@schema("kni")
@@ -182,6 +200,7 @@ model mock_tests {
   mock_test_questions mock_test_questions[]
   mock_test_attempts  mock_test_attempts[]
   weekly_assignments  weekly_assignments[]
+  file_uploads        file_uploads[]
 
   @@map("mock_tests")
   @@schema("kni")
@@ -316,6 +335,28 @@ model weekly_assignments {
   @@schema("kni")
 }
 
+// File Uploads
+model file_uploads {
+  id             String     @id @default(cuid())
+  user_id        String
+  file_name      String
+  file_size      Int
+  file_type      String
+  upload_type    String     @default("MOCK_TEST")
+  status         String     @default("UPLOADED") // UPLOADED, PROCESSING, CONVERTED, EVALUATING, COMPLETED, FAILED
+  progress       Int        @default(0)
+  error_message  String?
+  mock_test_id   String?
+  configuration  Json?
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+  user           user       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  mock_test      mock_tests? @relation(fields: [mock_test_id], references: [id], onDelete: SetNull)
+
+  @@map("file_uploads")
+  @@schema("kni")
+}
+
 // n8n Webhook Logs
 model n8n_webhook_logs {
   id            String    @id @default(cuid())
@@ -328,5 +369,26 @@ model n8n_webhook_logs {
   createdAt     DateTime  @default(now())
 
   @@map("n8n_webhook_logs")
+  @@schema("kni")
+}
+
+// Study Materials
+model study_materials {
+  id               String           @id @default(cuid())
+  title            String
+  description      String?
+  subject_area     String
+  resource_type    ResourceType
+  file_url         String
+  file_size        Int?
+  duration         Int? // For videos in minutes
+  difficulty_level DifficultyLevel?
+  tags             String[]
+  is_premium       Boolean          @default(false)
+  is_active        Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@map("study_materials")
   @@schema("kni")
 }

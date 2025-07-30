@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { FaCheckCircle, FaQuestionCircle } from "react-icons/fa";
-import { AiTwotoneQuestionCircle } from "react-icons/ai";
 import { renderDescriptionWithMultipleHighlights } from '@/utils/render-utils';
 
 const images = [
@@ -44,12 +43,12 @@ export default function Preparation() {
     );
 
     sectionRefs.current.forEach((section) => {
-      if (section) observer.observe(section);
+      if (section) {observer.observe(section);}
     });
 
     return () => {
       sectionRefs.current.forEach((section) => {
-        if (section) observer.unobserve(section);
+        if (section) {observer.unobserve(section);}
       });
     };
   }, []);
@@ -86,36 +85,36 @@ export default function Preparation() {
           <div className="order-2 md:order-1 sticky top-20">
             <Image
                 key={0}
-                src={images[0]}
+                src={images[0] || '/images/self-study.jpg'}
                 width={500}
                 height={400}
                 alt={t(`sections.0.title`)}
-                className={`rounded-lg shadow-md ${activeSection == 0 ? "fade-in-slide-up" : "opacity-0"}`}
+                className={`rounded-lg shadow-md ${activeSection === 0 ? "fade-in-slide-up" : "opacity-0"}`}
                 priority
                 placeholder="blur"
-                blurDataURL={blurImages[0]}
+                blurDataURL={blurImages[0] || '/images/self-study_blur.jpg'}
             />
             <Image
                 key={1}
-                src={images[1]}
+                src={images[1] || '/images/gather-online.jpg'}
                 width={500}
                 height={300}
                 alt={t(`sections.1.title`)}
-                className={`rounded-lg shadow-md ${activeSection == 1 ? "fade-in-slide-up" : "opacity-0"}`}
+                className={`rounded-lg shadow-md ${activeSection === 1 ? "fade-in-slide-up" : "opacity-0"}`}
                 priority
                 placeholder="blur"
-                blurDataURL={blurImages[1]}
+                blurDataURL={blurImages[1] || '/images/gather-online_blur.jpg'}
             />
             <Image
                 key={2}
-                src={images[2]}
+                src={images[2] || '/images/academy-study.jpg'}
                 width={500}
                 height={400}
                 alt={t(`sections.2.title`)}
-                className={`rounded-lg shadow-md ${activeSection == 2 ? "fade-in-slide-up" : "opacity-0"}`}
+                className={`rounded-lg shadow-md ${activeSection === 2 ? "fade-in-slide-up" : "opacity-0"}`}
                 priority
                 placeholder="blur"
-                blurDataURL={blurImages[2]}
+                blurDataURL={blurImages[2] || '/images/academy-study_blur.jpg'}
             />
           </div>
           {/* Right: Text Sections */}

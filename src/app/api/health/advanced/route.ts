@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
-import { MonitoringService } from '@/lib/monitoring';
 import { CacheService } from '@/lib/cache';
 import { prisma } from '@/lib/database';
 
@@ -54,14 +53,23 @@ async function checkDatabaseHealth(): Promise<{
     await prisma.$queryRaw`SELECT 1`;
     
     // Get connection pool info if available
-    const connections = await prisma.$queryRaw<Array<{ count: number }>>(
-      `SELECT count(*) as count FROM pg_stat_activity WHERE state = 'active'`
-    ).catch(() => [{ count: 0 }]);
+    const connections = await prisma.$queryRaw<Array<{ count: number }>>`
+      SELECT count(*) as count FROM pg_stat_activity WHERE state = 'active'
+    `.catch(() => [{ count: 0 }]);
     
     const responseTime = Date.now() - startTime;
     
+    let status: 'healthy' | 'degraded' | 'unhealthy';
+    if (responseTime < 100) {
+      status = 'healthy';
+    } else if (responseTime < 500) {
+      status = 'degraded';
+    } else {
+      status = 'unhealthy';
+    }
+    
     return {
-      status: responseTime < 100 ? 'healthy' : responseTime < 500 ? 'degraded' : 'unhealthy',
+      status,
       responseTime,
       connections: connections[0]?.count || 0,
     };
@@ -82,25 +90,32 @@ async function checkCacheHealth(): Promise<{
   const startTime = Date.now();
   
   try {
-    const cache = CacheService.getInstance();
     const testKey = 'health-check-test';
     const testValue = 'test-value';
     
     // Test cache set/get operations
-    await cache.set(testKey, testValue, 60);
-    const retrievedValue = await cache.get(testKey);
-    await cache.delete(testKey);
+    await CacheService.set(testKey, testValue, 60);
+    const retrievedValue = await CacheService.get(testKey);
+    await CacheService.delete(testKey);
     
     const responseTime = Date.now() - startTime;
     const isWorking = retrievedValue === testValue;
     
     // Get cache statistics if available
-    const stats = await cache.getStats();
+    const stats = await CacheService.getStats();
     const hitRate = stats.hits > 0 ? stats.hits / (stats.hits + stats.misses) : 0;
     
+    let status: 'healthy' | 'degraded' | 'unhealthy';
+    if (isWorking && responseTime < 50) {
+      status = 'healthy';
+    } else if (isWorking && responseTime < 200) {
+      status = 'degraded';
+    } else {
+      status = 'unhealthy';
+    }
+    
     return {
-      status: isWorking && responseTime < 50 ? 'healthy' : 
-              isWorking && responseTime < 200 ? 'degraded' : 'unhealthy',
+      status,
       responseTime,
       hitRate,
     };
@@ -133,7 +148,7 @@ function getSystemMetrics() {
 }
 
 // GET /api/health/advanced
-export async function GET(request: NextRequest) {
+export async function GET() {
   const startTime = Date.now();
   
   try {
@@ -182,8 +197,12 @@ export async function GET(request: NextRequest) {
     }
     
     // Set appropriate HTTP status code
-    const httpStatus = overallStatus === 'healthy' ? 200 : 
-                      overallStatus === 'degraded' ? 200 : 503;
+    let httpStatus: number;
+    if (overallStatus === 'healthy' || overallStatus === 'degraded') {
+      httpStatus = 200;
+    } else {
+      httpStatus = 503;
+    }
     
     return NextResponse.json(validatedResponse, {
       status: httpStatus,
@@ -220,7 +239,7 @@ export async function GET(request: NextRequest) {
 }
 
 // HEAD /api/health/advanced - Lightweight health check
-export async function HEAD(request: NextRequest) {
+export async function HEAD() {
   try {
     // Quick database ping
     await prisma.$queryRaw`SELECT 1`;

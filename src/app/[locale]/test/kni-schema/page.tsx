@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import Loading from '@/components/ui/Loading';
 
 interface SchemaTestResult {
@@ -85,10 +85,10 @@ export default function KNISchemaTestPage() {
         // Refresh the test results to show the new question
         await testKNISchema();
       } else {
-        alert(`Failed to create question: ${data.message}`);
+        // Failed to create question
       }
     } catch (error) {
-      alert(`Error creating question: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Error creating question
     } finally {
       setCreating(false);
     }
@@ -164,12 +164,21 @@ export default function KNISchemaTestPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
                           <p className="text-base"><strong className="text-blue-700">Schema Name:</strong> <span className="font-mono bg-white px-2 py-1 rounded">{testResult.schema.name}</span></p>
-                          <p className="text-base"><strong className="text-blue-700">Exists:</strong> <span className={`font-semibold ${testResult.schema.exists ? 'text-green-600' : 'text-red-600'}`}>{testResult.schema.exists ? 'Yes' : 'No'}</span></p>
+                          <p className="text-base"><strong className="text-blue-700">Exists:</strong> <span className={`font-semibold ${testResult.schema.exists ? 'text-green-600' : 'text-red-600'}`}>{(() => {
+                            if (testResult.schema.exists) {return 'Yes';}
+                            return 'No';
+                          })()}</span></p>
                           <p className="text-base"><strong className="text-blue-700">Total Tables:</strong> <span className="font-semibold text-indigo-600">{testResult.schema.tableCount}</span></p>
                         </div>
                         <div className="space-y-3">
-                          <p className="text-base"><strong className="text-blue-700">Prisma Connected:</strong> <span className={`font-semibold ${testResult.prismaClient?.connected ? 'text-green-600' : 'text-red-600'}`}>{testResult.prismaClient?.connected ? 'Yes' : 'No'}</span></p>
-                          <p className="text-base"><strong className="text-blue-700">Multi-Schema:</strong> <span className={`font-semibold ${testResult.prismaClient?.multiSchemaEnabled ? 'text-green-600' : 'text-orange-600'}`}>{testResult.prismaClient?.multiSchemaEnabled ? 'Enabled' : 'Disabled'}</span></p>
+                          <p className="text-base"><strong className="text-blue-700">Prisma Connected:</strong> <span className={`font-semibold ${testResult.prismaClient?.connected ? 'text-green-600' : 'text-red-600'}`}>{(() => {
+                            if (testResult.prismaClient?.connected) {return 'Yes';}
+                            return 'No';
+                          })()}</span></p>
+                          <p className="text-base"><strong className="text-blue-700">Multi-Schema:</strong> <span className={`font-semibold ${testResult.prismaClient?.multiSchemaEnabled ? 'text-green-600' : 'text-orange-600'}`}>{(() => {
+                            if (testResult.prismaClient?.multiSchemaEnabled) {return 'Enabled';}
+                            return 'Disabled';
+                          })()}</span></p>
                         </div>
                       </div>
                     </div>

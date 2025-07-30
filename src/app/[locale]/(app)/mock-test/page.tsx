@@ -9,6 +9,7 @@ interface Question {
   id: string;
   text: string;
   options: string[];
+  image?: string;
 }
 
 interface Test {
@@ -30,13 +31,13 @@ export default function MockTestPage() {
 
   useEffect(() => {
     const fetchMockTests = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {return;}
       
       setIsLoading(true);
       setError('');
       
       try {
-        const response = await fetch(`/api/mock-tests?userId=${user.id}&userType=${user.user_type}`, {
+        const response = await fetch(`/api/mock-tests?userId=${user.id}&userType=${user.role}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -95,7 +96,7 @@ export default function MockTestPage() {
   };
 
   const submitTest = async () => {
-    if (!test || !user?.id) return;
+    if (!test || !user?.id) {return;}
     
     setIsSubmitting(true);
     
@@ -166,6 +167,17 @@ export default function MockTestPage() {
   const isLastQuestion = currentQuestionIndex === test.questions.length - 1;
   const answeredQuestions = Object.keys(answers).length;
   const totalQuestions = test.questions.length;
+
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">No questions available</h2>
+          <p className="text-gray-600">This test doesn't have any questions.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
@@ -274,7 +286,7 @@ export default function MockTestPage() {
                     ${
                       index === currentQuestionIndex
                         ? 'bg-blue-600 text-white shadow-lg'
-                        : answers[test.questions[index].id]
+                        : test.questions[index]?.id && answers[test.questions[index].id]
                         ? 'bg-green-100 text-green-700 hover:bg-green-200'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }

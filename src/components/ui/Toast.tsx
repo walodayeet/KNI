@@ -57,19 +57,19 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   }, []);
 
   const success = useCallback((title: string, message?: string) => {
-    addToast({ type: 'success', title, message });
+    addToast({ type: 'success', title, message: message || '' });
   }, [addToast]);
 
   const error = useCallback((title: string, message?: string) => {
-    addToast({ type: 'error', title, message });
+    addToast({ type: 'error', title, message: message || '' });
   }, [addToast]);
 
   const warning = useCallback((title: string, message?: string) => {
-    addToast({ type: 'warning', title, message });
+    addToast({ type: 'warning', title, message: message || '' });
   }, [addToast]);
 
   const info = useCallback((title: string, message?: string) => {
-    addToast({ type: 'info', title, message });
+    addToast({ type: 'info', title, message: message || '' });
   }, [addToast]);
 
   return (
@@ -94,7 +94,7 @@ interface ToastContainerProps {
 }
 
 const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => {
-  if (toasts.length === 0) return null;
+  if (toasts.length === 0) {return null;}
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">

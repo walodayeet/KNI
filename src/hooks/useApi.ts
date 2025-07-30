@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ApiResponse } from '@/types';
-import { API_CONFIG, ERROR_MESSAGES } from '@/utils/constants';
+import { ERROR_MESSAGES } from '@/utils/constants';
 
 interface UseApiOptions {
   onSuccess?: (data: any) => void;
@@ -36,12 +36,12 @@ export function useApi<T = any>(
           setData(response.data);
           options.onSuccess?.(response.data);
           return response.data;
-        } else {
+        } 
           const errorMessage = response.error || response.message || ERROR_MESSAGES.SERVER_ERROR;
           setError(errorMessage);
           options.onError?.(errorMessage);
           return null;
-        }
+        
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : ERROR_MESSAGES.NETWORK_ERROR;
         setError(errorMessage);
@@ -82,7 +82,7 @@ export function useApiForm<T = any>(
     async (formData: any): Promise<T | null> => {
       return api.execute(formData);
     },
-    [api.execute]
+    [api]
   );
 
   return {
@@ -114,10 +114,10 @@ export function useApiPagination<T = any>(
   const loadPage = useCallback(
     (newPage: number, newLimit?: number) => {
       setPage(newPage);
-      if (newLimit) setLimit(newLimit);
+      if (newLimit) {setLimit(newLimit);}
       return api.execute(newPage, newLimit || limit);
     },
-    [api.execute, limit]
+    [api, limit]
   );
 
   const nextPage = useCallback(() => {

@@ -1,8 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import Logo from "./logo";
-
 export default function Footer({ border = false }: { border?: boolean }) {
   const footerClasses = `bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white ${border ? 'border-t border-gray-700' : ''}`;
   

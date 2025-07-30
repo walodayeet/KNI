@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update code as used and user as premium
-    const [updatedCode, updatedUser] = await Promise.all([
+    const [_updatedCode, updatedUser] = await Promise.all([
       prisma.premium_codes.update({
         where: { id: premiumCode.id },
         data: {
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     // Send webhook to n8n
     try {
-      await fetch(process.env.N8N_WEBHOOK_URL + '/code-redeemed', {
+      await fetch(`${process.env.N8N_WEBHOOK_URL  }/code-redeemed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
