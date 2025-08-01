@@ -9,7 +9,7 @@ export enum LogLevel {
 }
 
 // Log entry interface
-interface LogEntry {
+export interface LogEntry {
   timestamp: string
   level: LogLevel
   message: string
@@ -24,7 +24,7 @@ interface LogEntry {
 }
 
 // Logger configuration
-interface LoggerConfig {
+export interface LoggerConfig {
   level: LogLevel
   enableConsole: boolean
   enableFile: boolean
@@ -40,14 +40,22 @@ class Logger {
   private flushInterval: NodeJS.Timeout | null = null
 
   constructor(config: Partial<LoggerConfig> = {}) {
-    this.config = {
+    const baseConfig = {
       level: this.getLogLevelFromEnv(),
       enableConsole: process.env.NODE_ENV !== 'production',
       enableFile: true,
       enableRemote: process.env.NODE_ENV === 'production',
-      remoteEndpoint: process.env.LOG_ENDPOINT,
       maxFileSize: 10 * 1024 * 1024, // 10MB
       maxFiles: 5,
+    }
+    
+    // Only include remoteEndpoint if it has a value
+    if (process.env.LOG_ENDPOINT) {
+      (baseConfig as any).remoteEndpoint = process.env.LOG_ENDPOINT
+    }
+    
+    this.config = {
+      ...baseConfig,
       ...config,
     }
 
@@ -98,14 +106,23 @@ class Logger {
       timestamp: new Date().toISOString(),
       level,
       message,
-      context,
-      error,
+    }
+
+    // Only include optional properties if they have values
+    if (context) {
+      entry.context = context
+    }
+    if (error) {
+      entry.error = error
     }
 
     if (request) {
       entry.requestId = request.headers.get('x-request-id') || crypto.randomUUID()
       entry.ip = this.getClientIP(request)
-      entry.userAgent = request.headers.get('user-agent') || undefined
+      const userAgent = request.headers.get('user-agent')
+      if (userAgent) {
+        entry.userAgent = userAgent
+      }
       entry.url = request.url
       entry.method = request.method
     }
@@ -122,7 +139,7 @@ class Logger {
     if (realIP) return realIP
     if (forwarded) return forwarded.split(',')[0]?.trim() || ''
     
-    return request.ip || 'unknown'
+    return 'unknown'
   }
 
   private async writeLog(entry: LogEntry): Promise<void> {
@@ -324,8 +341,12 @@ export class PerformanceMonitor {
     request?: NextRequest
   ) {
     this.operation = operation
-    this.context = context
-    this.request = request
+    if (context) {
+      this.context = context
+    }
+    if (request) {
+      this.request = request
+    }
     this.startTime = performance.now()
   }
 

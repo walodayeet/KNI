@@ -36,7 +36,7 @@ const defaultConfig: EmailConfig = {
     name: process.env.EMAIL_FROM_NAME || 'KNI Platform',
     address: process.env.EMAIL_FROM_ADDRESS || 'noreply@kni.com',
   },
-  replyTo: process.env.EMAIL_REPLY_TO,
+  ...(process.env.EMAIL_REPLY_TO && { replyTo: process.env.EMAIL_REPLY_TO }),
   maxRetries: parseInt(process.env.EMAIL_MAX_RETRIES || '3'),
   retryDelay: parseInt(process.env.EMAIL_RETRY_DELAY || '5000'),
 }
@@ -106,7 +106,7 @@ interface EmailQueueItem {
 // Email manager class
 export class EmailManager {
   private static instance: EmailManager
-  private transporter: nodemailer.Transporter
+  private transporter!: nodemailer.Transporter
   private config: EmailConfig
   private templates: Map<string, EmailTemplate> = new Map()
   private queue: EmailQueueItem[] = []
@@ -128,7 +128,7 @@ export class EmailManager {
   }
 
   private createTransporter(): void {
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host: this.config.host,
       port: this.config.port,
       secure: this.config.secure,
@@ -141,7 +141,7 @@ export class EmailManager {
     })
 
     // Verify connection
-    this.transporter.verify((error, success) => {
+    this.transporter.verify((error, _success) => {
       if (error) {
         logger.error('SMTP connection failed', {}, error)
       } else {
@@ -166,7 +166,9 @@ export class EmailManager {
         }
       }
     } catch (error) {
-      await logger.warn('Failed to load email templates', {}, error instanceof Error ? error : new Error(String(error)))
+      await logger.warn('Failed to load email templates', {
+        error: error instanceof Error ? error.message : String(error)
+      })
     }
   }
 
@@ -210,11 +212,16 @@ export class EmailManager {
     const subjectTemplate = handlebars.compile(template.subject)
     const textTemplate = template.text ? handlebars.compile(template.text) : null
 
-    return {
+    const result: { subject: string; html: string; text?: string } = {
       subject: subjectTemplate(variables),
       html: compiledTemplate(variables),
-      text: textTemplate ? textTemplate(variables) : undefined,
     }
+
+    if (textTemplate) {
+      result.text = textTemplate(variables)
+    }
+
+    return result
   }
 
   // Send email immediately
@@ -280,8 +287,11 @@ export class EmailManager {
         to,
         subject: compiled.subject,
         html: compiled.html,
-        text: compiled.text,
         ...options,
+      }
+
+      if (compiled.text) {
+        emailOptions.text = compiled.text
       }
 
       return this.sendEmail(emailOptions)

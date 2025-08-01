@@ -6,7 +6,7 @@ import yaml from 'js-yaml'
 import dotenv from 'dotenv'
 
 // Configuration interfaces
-interface ConfigSource {
+export interface ConfigSource {
   type: 'env' | 'file' | 'remote' | 'vault' | 'database'
   path?: string
   url?: string
@@ -16,14 +16,14 @@ interface ConfigSource {
   encryption?: EncryptionConfig
 }
 
-interface EncryptionConfig {
+export interface EncryptionConfig {
   enabled: boolean
   algorithm: 'aes-256-gcm' | 'aes-256-cbc'
   key?: string
   keyFile?: string
 }
 
-interface ConfigSchema {
+export interface ConfigSchema {
   [key: string]: {
     type: 'string' | 'number' | 'boolean' | 'array' | 'object'
     required?: boolean
@@ -36,7 +36,7 @@ interface ConfigSchema {
   }
 }
 
-interface ConfigValidation {
+export interface ConfigValidation {
   min?: number
   max?: number
   pattern?: string
@@ -44,7 +44,7 @@ interface ConfigValidation {
   custom?: (value: any) => boolean | string
 }
 
-interface ConfigEnvironment {
+export interface ConfigEnvironment {
   name: string
   sources: ConfigSource[]
   schema: ConfigSchema
@@ -56,13 +56,13 @@ interface ConfigEnvironment {
   }
 }
 
-interface ConfigWatcher {
+export interface ConfigWatcher {
   path: string
   callback: (config: any) => void
   lastModified?: Date
 }
 
-interface ConfigAudit {
+export interface ConfigAudit {
   timestamp: Date
   action: 'load' | 'reload' | 'update' | 'validate' | 'error'
   source: string
@@ -73,7 +73,7 @@ interface ConfigAudit {
   user?: string
 }
 
-interface ConfigMetrics {
+export interface ConfigMetrics {
   loadTime: number
   reloadCount: number
   validationErrors: number
@@ -756,7 +756,7 @@ export class ConfigManager extends EventEmitter {
   }
 
   // Get configuration value
-  get<T = any>(key: string, defaultValue?: T): T {
+  get<T = any>(key: string, defaultValue?: T): T | undefined {
     const value = this.getNestedValue(this.config, key)
     return value !== undefined ? value : defaultValue
   }
@@ -866,13 +866,13 @@ export class ConfigManager extends EventEmitter {
 }
 
 // Environment configurations
-export const Environments = {
+export const Environments: Record<string, ConfigEnvironment> = {
   development: {
     name: 'development',
     sources: [
-      { type: 'env' as const, priority: 1 },
-      { type: 'file' as const, path: '.env.development', priority: 2, watch: true, format: 'env' as const },
-      { type: 'file' as const, path: 'config/development.json', priority: 3, watch: true, format: 'json' as const },
+      { type: 'env', priority: 1 },
+      { type: 'file', path: '.env.development', priority: 2, watch: true },
+      { type: 'file', path: 'config/development.json', priority: 3, watch: true, format: 'json' },
     ],
     schema: appConfigSchema,
     validation: {
@@ -881,13 +881,13 @@ export const Environments = {
       stripUnknown: false,
     },
   },
-  
+
   production: {
     name: 'production',
     sources: [
-      { type: 'env' as const, priority: 1 },
-      { type: 'file' as const, path: '.env.production', priority: 2, format: 'env' as const },
-      { type: 'file' as const, path: 'config/production.json', priority: 3, format: 'json' as const },
+      { type: 'env', priority: 1 },
+      { type: 'file', path: '.env.production', priority: 2 },
+      { type: 'file', path: 'config/production.json', priority: 3, format: 'json' },
     ],
     schema: appConfigSchema,
     validation: {
@@ -896,13 +896,13 @@ export const Environments = {
       stripUnknown: true,
     },
   },
-  
+
   test: {
     name: 'test',
     sources: [
-      { type: 'env' as const, priority: 1 },
-      { type: 'file' as const, path: '.env.test', priority: 2, format: 'env' as const },
-      { type: 'file' as const, path: 'config/test.json', priority: 3, format: 'json' as const },
+      { type: 'env', priority: 1 },
+      { type: 'file', path: '.env.test', priority: 2 },
+      { type: 'file', path: 'config/test.json', priority: 3, format: 'json' },
     ],
     schema: appConfigSchema,
     overrides: {
@@ -916,7 +916,7 @@ export const Environments = {
       stripUnknown: false,
     },
   },
-} as const
+}
 
 // Configuration utilities
 export class ConfigUtils {
@@ -960,7 +960,7 @@ export const configManager = ConfigManager.getInstance(environment)
 
 // Export configuration instance
 export const config = {
-  get: <T = any>(key: string, defaultValue?: T): T => configManager.get(key, defaultValue),
+  get: <T = any>(key: string, defaultValue?: T): T | undefined => configManager.get(key, defaultValue),
   set: (key: string, value: any): void => configManager.set(key, value),
   has: (key: string): boolean => configManager.has(key),
   getAll: (): any => configManager.getAll(),

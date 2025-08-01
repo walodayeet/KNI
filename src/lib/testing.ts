@@ -6,7 +6,7 @@ import { logger } from './logger'
 import { CacheService } from './cache'
 import { EmailService } from './email'
 import { NotificationService } from './notifications'
-import { z } from 'zod'
+
 import crypto from 'crypto'
 
 // Test configuration
@@ -248,7 +248,9 @@ export class TestDatabase {
 
   // Begin transaction for test isolation
   static async beginTransaction() {
-    if (this.isInTransaction) return
+    if (this.isInTransaction) {
+      return
+    }
     
     this.transactionClient = await prisma.$begin()
     this.isInTransaction = true
@@ -256,7 +258,9 @@ export class TestDatabase {
 
   // Rollback transaction
   static async rollbackTransaction() {
-    if (!this.isInTransaction || !this.transactionClient) return
+    if (!this.isInTransaction || !this.transactionClient) {
+      return
+    }
     
     await this.transactionClient.$rollback()
     this.isInTransaction = false
@@ -424,13 +428,17 @@ export class TestMocks {
 
   // Setup cache mocks
   private static setupCacheMocks() {
-    if (!defaultTestConfig.cache.mockRedis) return
+    if (!defaultTestConfig.cache.mockRedis) {
+      return
+    }
 
     const mockCache = new Map<string, { value: any; expiry?: number }>()
 
     this.mockMethod('CacheService', 'get', async (key: string) => {
       const item = mockCache.get(key)
-      if (!item) return null
+      if (!item) {
+        return null
+      }
       
       if (item.expiry && Date.now() > item.expiry) {
         mockCache.delete(key)
@@ -458,7 +466,9 @@ export class TestMocks {
 
   // Setup email mocks
   private static setupEmailMocks() {
-    if (!defaultTestConfig.email.mockSending) return
+    if (!defaultTestConfig.email.mockSending) {
+      return
+    }
 
     this.mockMethod('EmailService', 'send', async (emailData: any) => {
       if (defaultTestConfig.email.captureEmails) {
@@ -498,7 +508,9 @@ export class TestMocks {
 
   // Setup notification mocks
   private static setupNotificationMocks() {
-    if (!defaultTestConfig.notifications.mockSending) return
+    if (!defaultTestConfig.notifications.mockSending) {
+      return
+    }
 
     this.mockMethod('NotificationService', 'send', async (notificationData: any) => {
       if (defaultTestConfig.notifications.captureNotifications) {
@@ -538,7 +550,9 @@ export class TestMocks {
 
   // Setup logger mocks
   private static setupLoggerMocks() {
-    if (!defaultTestConfig.logging.captureLogsInTests) return
+    if (!defaultTestConfig.logging.captureLogsInTests) {
+      return
+    }
 
     const logMethods = ['debug', 'info', 'warn', 'error']
     
@@ -561,10 +575,12 @@ export class TestMocks {
 
   // Setup external API mocks
   private static setupExternalApiMocks() {
-    if (!defaultTestConfig.api.mockExternalCalls) return
+    if (!defaultTestConfig.api.mockExternalCalls) {
+      return
+    }
 
     // Mock fetch for external API calls
-    global.fetch = jest.fn().mockImplementation(async (url: string, options?: any) => {
+    global.fetch = jest.fn().mockImplementation(async (url: string, _options?: any) => {
       const mockResponse = defaultTestConfig.api.defaultResponses[url] || {
         ok: true,
         status: 200,
@@ -586,7 +602,9 @@ export class TestMocks {
   // Helper to mock a method
   private static mockMethod(objectName: string, methodName: string, mockImplementation: any) {
     const targetObject = this.getObjectByName(objectName)
-    if (!targetObject || !targetObject[methodName]) return
+    if (!targetObject || !targetObject[methodName]) {
+      return
+    }
 
     const key = `${objectName}.${methodName}`
     if (!this.originalMethods.has(key)) {
@@ -656,13 +674,14 @@ export class TestMocks {
 
   static expectLogMessage(level: string, messagePattern: string | RegExp) {
     const matchingLogs = this.capturedLogs.filter(log => {
-      if (log.level !== level) return false
+      if (log.level !== level) {
+        return false
+      }
       
       if (typeof messagePattern === 'string') {
         return log.message.includes(messagePattern)
-      } else {
-        return messagePattern.test(log.message)
       }
+      return messagePattern.test(log.message)
     })
 
     expect(matchingLogs.length).toBeGreaterThan(0)
@@ -682,7 +701,9 @@ export class TestHelpers {
     
     while (Date.now() - start < timeout) {
       const result = await condition()
-      if (result) return
+      if (result) {
+        return
+      }
       
       await new Promise(resolve => setTimeout(resolve, interval))
     }
@@ -789,7 +810,9 @@ export class TestSuite {
 
   // Global setup (run once before all tests)
   static async globalSetup() {
-    if (this.isSetup) return
+    if (this.isSetup) {
+      return
+    }
     
     // Set test environment
     process.env.NODE_ENV = 'test'
@@ -805,7 +828,9 @@ export class TestSuite {
 
   // Global teardown (run once after all tests)
   static async globalTeardown() {
-    if (!this.isSetup) return
+    if (!this.isSetup) {
+      return
+    }
     
     // Cleanup database
     await TestDatabase.cleanup()
@@ -886,13 +911,13 @@ if (typeof expect !== 'undefined') {
     },
     
     toHaveBeenCalledWithPartial(received: jest.MockedFunction<any>, expected: any) {
-      const calls = received.mock.calls
-      const pass = calls.some(call => {
-        const arg = call[0]
-        return Object.entries(expected).every(([key, value]) => {
-          return arg && arg[key] === value
+      const { mock: { calls } } = received
+        const pass = calls.some(({ 0: arg }) => {
+          return Object.entries(expected).every((entry) => {
+            const [key, value] = entry
+            return arg && arg[key] === value
+          })
         })
-      })
       
       return {
         message: () => `expected function ${pass ? 'not ' : ''}to have been called with partial object ${JSON.stringify(expected)}`,
@@ -906,7 +931,7 @@ if (typeof expect !== 'undefined') {
 export { defaultTestConfig as testConfig }
 
 // Export everything for easy importing
-export default {
+const testingModule = {
   TestDataFactory,
   TestDatabase,
   TestMocks,
@@ -914,3 +939,5 @@ export default {
   TestSuite,
   testConfig: defaultTestConfig,
 }
+
+export default testingModule

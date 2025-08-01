@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Send webhook to n8n for processing
     try {
-      await fetch(`${process.env.N8N_WEBHOOK_URL  }/file-upload`, {
+      await fetch(process.env.N8N_WEBHOOK_URL + '/file-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -278,7 +278,7 @@ export async function PUT(request: NextRequest) {
 
         if (user) {
           // Send completion webhook to n8n for notification
-          await fetch(`${process.env.N8N_WEBHOOK_URL  }/upload-completed`, {
+          await fetch(process.env.N8N_WEBHOOK_URL + '/upload-completed', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -370,7 +370,7 @@ export async function DELETE(request: NextRequest) {
 
     // Send cancellation webhook to n8n
     try {
-      await fetch(`${process.env.N8N_WEBHOOK_URL  }/upload-cancelled`, {
+      await fetch(process.env.N8N_WEBHOOK_URL + '/upload-cancelled', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -216,7 +216,7 @@ export class WebhookManager extends EventEmitter {
     }
 
     // Validate webhook (excluding processor)
-    const { processor, ...validationData } = incomingWebhook
+    const { processor: _processor, ...validationData } = incomingWebhook
     incomingWebhookSchema.parse(validationData)
 
     this.incomingWebhooks.set(webhookId, incomingWebhook)
@@ -556,8 +556,10 @@ export class WebhookManager extends EventEmitter {
   }
 
   // Update delivery metrics
-  private updateDeliveryMetrics(deliveryTime: number, success: boolean): void {
-    if (!this.config.enableMetrics) return
+  private updateDeliveryMetrics(deliveryTime: number, _success: boolean): void {
+    if (!this.config.enableMetrics) {
+      return
+    }
 
     this.deliveryTimes.push(deliveryTime)
     

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     // For premium users, generate daily recommendations
     if (attempt.user.user_type === 'PREMIUM') {
       try {
-        await fetch(`${process.env.N8N_WEBHOOK_URL  }/generate-recommendations`, {
+        await fetch(process.env.N8N_WEBHOOK_URL + '/generate-recommendations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const whereClause: any = {};
+    let whereClause: any = {};
     
     if (attemptId) {
       whereClause.attempt_id = attemptId;

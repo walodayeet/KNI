@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { db } from './database';
 
 // Get database instance from the exported singleton
@@ -47,7 +47,7 @@ export const DatabaseService = {
   }),
   
   // Transaction support
-  transaction: <T>(operations: (tx: PrismaClient) => Promise<T>) => 
+  transaction: <T>(operations: (tx: Prisma.TransactionClient) => Promise<T>) => 
     db.transaction(operations),
 };
 

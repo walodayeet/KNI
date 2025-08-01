@@ -132,19 +132,19 @@ export function asyncHandler(
 
 // Logger utility
 export class Logger {
-  static info(message: string, meta?: any) {
+  static info(_message: string, _meta?: any) {
     // Log info message - consider using proper logger in production
   }
 
-  static warn(message: string, meta?: any) {
+  static warn(_message: string, _meta?: any) {
     // console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, meta || '');
   }
 
-  static error(message: string, error?: any) {
+  static error(_message: string, _error?: any) {
     // console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, error || '');
   }
 
-  static debug(message: string, meta?: any) {
+  static debug(_message: string, _meta?: any) {
     if (process.env.NODE_ENV === 'development') {
       // console.debug(`[DEBUG] ${new Date().toISOString()} - ${message}`, meta || '');
     }

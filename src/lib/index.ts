@@ -6,7 +6,13 @@
  */
 
 // Core utilities
-export * from './config'
+export {
+  ConfigManager,
+  configManager,
+  config,
+  Environments,
+  ConfigUtils
+} from './config'
 export * from './logger'
 export {
   AppError,
@@ -25,24 +31,51 @@ export * from './validation'
 
 // Database and data management
 export * from './database'
-export * from './db'
+export { prisma as dbPrisma, testDatabaseConnection, disconnectDatabase } from './db'
 export * from './cache'
 export * from './search'
-export * from './backup'
+export {
+  BackupManager,
+  backupManager,
+  LocalStorageProvider,
+  CompressionUtils,
+  EncryptionUtils as BackupEncryptionUtils,
+  backupConfig
+} from './backup'
+export type {
+  BackupMetadata,
+  BackupJob,
+  RestoreJob,
+  BackupType,
+  BackupStatus,
+  RestoreStatus
+} from './backup'
 
 // Authentication and security
 export * from './auth'
-export * from './security'
+export {
+  securityHeaders,
+  getClientIP,
+  rateLimit,
+  CSRFProtection,
+  InputValidator,
+  createSecurityMiddleware,
+  EncryptionUtils as SecurityEncryptionUtils
+} from './security'
 
 // API and communication
 export {
+  createApiHandler,
+  ApiUtils,
+  handleCors,
+  KniApiError,
+  KniApiErrors
+} from './api'
+export type {
   ApiResponse,
   PaginatedResponse,
   RequestContext,
-  ApiHandlerOptions,
-  createApiHandler,
-  ApiUtils,
-  handleCors
+  ApiHandlerOptions
 } from './api'
 export * from './external-api'
 export * from './webhooks'
@@ -55,11 +88,50 @@ export * from './email'
 // Workflow and automation
 export * from './workflow'
 export * from './queue'
-export * from './notification'
-export * from './notifications'
+// Notification services with explicit re-exports to avoid conflicts
+export {
+  NotificationService,
+  notificationSchema,
+  notificationTemplateSchema,
+  notificationService
+} from './notification'
+
+export {
+  NotificationType,
+  NotificationChannel as NotificationsChannel,
+  NotificationPriority,
+  NotificationStatus,
+  NotificationManager,
+  NotificationService as NotificationsService,
+  notificationManager
+} from './notifications'
+
+export type {
+  NotificationTemplate as NotificationsTemplate,
+  NotificationData,
+  NotificationPreferences as NotificationsPreferences,
+  QueuedNotification
+} from './notifications'
 
 // Monitoring and analytics
-export * from './monitoring'
+export type {
+  HealthCheck,
+  SystemMetrics,
+  ApplicationMetrics,
+  PerformanceMetric,
+  Alert
+} from './monitoring'
+export {
+  HealthStatus,
+  MetricType,
+  AlertSeverity,
+  RequestTracker as MonitoringPerformanceMonitor,
+  MonitoringManager,
+  monitoringManager,
+  MetricsCollector,
+  AlertManager,
+  HealthChecks
+} from './monitoring'
 export * from './analytics'
 export * from './performance'
 export * from './reporting'
@@ -75,10 +147,13 @@ export * from './i18n'
 // Re-export commonly used types and interfaces
 export type {
   // Config types
-  AppConfig,
-  DatabaseConfig,
-  CacheConfig,
-  SecurityConfig,
+  ConfigSource,
+  ConfigEnvironment,
+  ConfigSchema,
+  ConfigValidation,
+  ConfigWatcher,
+  ConfigAudit,
+  ConfigMetrics
 } from './config'
 
 export type {
@@ -99,10 +174,9 @@ export type {
 
 export type {
   // Auth types
-  AuthUser,
-  AuthSession,
-  LoginAttempt,
-  UserSession,
+  ExtendedUser,
+  ExtendedSession,
+  ExtendedJWT
 } from './auth'
 
 export type {
@@ -130,35 +204,35 @@ export type {
 } from './upload'
 
 // Utility classes and services (singleton instances)
-import { DatabaseService } from './database'
+import { db as DatabaseService } from './database'
 import { CacheService } from './cache'
-import { FileUploadService } from './upload'
+import { UploadService as FileUploadService } from './upload'
 import { NotificationService } from './notification'
 import { WorkflowEngine } from './workflow'
 import { AnalyticsService } from './analytics'
-import { MonitoringService } from './monitoring'
-import { SearchService } from './search'
+import { monitoringManager as MonitoringService } from './monitoring'
+import { searchEngine as SearchService } from './search'
 import { QueueManager } from './queue'
 import { EmailService } from './email'
-import { WebhookService } from './webhooks'
-import { RealtimeService } from './realtime'
-import { BackupService } from './backup'
-import { DeploymentService } from './deployment'
-import { FeatureFlagService } from './feature-flags'
-import { TestingService } from './testing'
-import { ReportingService } from './reporting'
-import { PerformanceMonitor } from './performance'
-import { I18nService } from './i18n'
+import { webhookManager as WebhookService } from './webhooks'
+import { realtimeManager as RealtimeService } from './realtime'
+import { backupManager as BackupService } from './backup'
+import { deploymentManager as DeploymentService } from './deployment'
+import { featureFlagManager as FeatureFlagService } from './feature-flags'
+import { TestSuite as TestingService } from './testing'
+import { reportingEngine as ReportingService } from "./reporting"
+import { performanceManager as PerformanceMonitor } from './performance'
+import { i18n as I18nService } from './i18n'
 
 // Create and export service instances
 export const services = {
   // Core services
-  database: DatabaseService.getInstance(),
-  cache: new CacheService(),
+  database: DatabaseService,
+  cache: CacheService,
   
   // File and content services
-  upload: FileUploadService.getInstance(),
-  email: EmailService.getInstance(),
+  upload: FileUploadService,
+  email: EmailService,
   
   // Workflow and automation services
   notifications: NotificationService.getInstance(),
@@ -166,30 +240,30 @@ export const services = {
   queue: QueueManager.getInstance(),
   
   // Communication services
-  webhooks: WebhookService.getInstance(),
-  realtime: RealtimeService.getInstance(),
+  webhooks: WebhookService,
+  realtime: RealtimeService,
   
   // Search and analytics services
-  search: SearchService.getInstance(),
-  analytics: AnalyticsService.getInstance(),
+  search: SearchService,
+  analytics: AnalyticsService,
   
   // Monitoring and performance services
-  monitoring: MonitoringService.getInstance(),
-  performance: new PerformanceMonitor(),
+  monitoring: MonitoringService,
+  performance: PerformanceMonitor,
   
   // Development and deployment services
-  testing: TestingService.getInstance(),
-  deployment: DeploymentService.getInstance(),
-  backup: BackupService.getInstance(),
+  testing: TestingService,
+  deployment: DeploymentService,
+  backup: BackupService,
   
   // Feature management
-  featureFlags: FeatureFlagService.getInstance(),
+  featureFlags: FeatureFlagService,
   
   // Internationalization
-  i18n: I18nService.getInstance(),
+  i18n: I18nService,
   
   // Reporting
-  reporting: ReportingService.getInstance(),
+  reporting: ReportingService,
 }
 
 // Utility functions collection
@@ -206,7 +280,9 @@ export const utils = {
     },
     
     truncate: (text: string, length: number, suffix = '...'): string => {
-      if (text.length <= length) {return text}
+      if (text.length <= length) {
+        return text
+      }
       return text.substring(0, length - suffix.length) + suffix
     },
     
@@ -289,10 +365,18 @@ export const utils = {
       const diffHours = Math.floor(diffMins / 60)
       const diffDays = Math.floor(diffHours / 24)
       
-      if (diffSecs < 60) {return 'just now'}
-      if (diffMins < 60) {return `${diffMins}m ago`}
-      if (diffHours < 24) {return `${diffHours}h ago`}
-      if (diffDays < 7) {return `${diffDays}d ago`}
+      if (diffSecs < 60) {
+        return 'just now'
+      }
+      if (diffMins < 60) {
+        return `${diffMins}m ago`
+      }
+      if (diffHours < 24) {
+        return `${diffHours}h ago`
+      }
+      if (diffDays < 7) {
+        return `${diffDays}d ago`
+      }
       return date.toLocaleDateString()
     },
   },
@@ -324,7 +408,9 @@ export const utils = {
       const shuffled = [...array]
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1))
-        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        const temp = shuffled[i]!
+        shuffled[i] = shuffled[j]!
+        shuffled[j] = temp
       }
       return shuffled
     },
@@ -337,7 +423,7 @@ export const utils = {
   
   // Object utilities
   object: {
-    pick: <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+    pick: <T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
       const result = {} as Pick<T, K>
       keys.forEach(key => {
         if (key in obj) {
@@ -525,7 +611,7 @@ export const utils = {
       maxAttempts = 3,
       delay = 1000
     ): Promise<T> => {
-      let lastError: Error
+      let lastError: Error | undefined
       
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
@@ -541,7 +627,7 @@ export const utils = {
         }
       }
       
-      throw new Error(lastError?.message || 'Retry failed')
+      throw lastError || new Error('Retry failed')
     },
     
     parallel: async <T>(promises: Promise<T>[], concurrency = 5): Promise<T[]> => {
@@ -628,7 +714,7 @@ export const healthCheck = async (): Promise<{
 export const initializeServices = async (): Promise<void> => {
   try {
     // Initialize core services first
-    await services.database.connect()
+    // Database connection is established when DatabaseManager instance is created
     
     // Initialize other services
     // Most services are initialized on first use, but some may need explicit initialization

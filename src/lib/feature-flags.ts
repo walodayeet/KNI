@@ -1,7 +1,6 @@
 import { logger } from './logger'
 import { CacheService } from './cache'
 import { z } from 'zod'
-import { cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
 
 // Feature flag configuration
@@ -23,8 +22,8 @@ interface FeatureFlagConfig {
     enableABTesting: boolean
   }
   remote: {
-    endpoint?: string
-    apiKey?: string
+    endpoint?: string | undefined
+    apiKey?: string | undefined
     timeout: number
     retries: number
   }
@@ -122,26 +121,26 @@ export interface GradualRollout {
 }
 
 export interface EvaluationContext {
-  userId?: string
-  email?: string
-  userAgent?: string
-  ipAddress?: string
-  country?: string
-  region?: string
-  city?: string
-  device?: string
-  browser?: string
-  os?: string
-  customAttributes?: Record<string, any>
+  userId?: string | undefined
+  email?: string | undefined
+  userAgent?: string | undefined
+  ipAddress?: string | undefined
+  country?: string | undefined
+  region?: string | undefined
+  city?: string | undefined
+  device?: string | undefined
+  browser?: string | undefined
+  os?: string | undefined
+  customAttributes?: Record<string, any> | undefined
   timestamp: Date
 }
 
 export interface EvaluationResult {
   flagId: string
   value: any
-  variant?: string
+  variant?: string | undefined
   reason: string
-  ruleId?: string
+  ruleId?: string | undefined
   timestamp: Date
   context: EvaluationContext
 }
@@ -660,7 +659,7 @@ export class FeatureFlagEvaluator {
       case 'email':
         return this.evaluateEmailRollout(flag.rollout, context)
       case 'custom':
-        return this.evaluateCustomRollout(flag.rollout, context)
+        return await this.evaluateCustomRollout(flag.rollout, context)
       default:
         return null
     }
@@ -714,10 +713,10 @@ export class FeatureFlagEvaluator {
   }
 
   // Evaluate custom rollout
-  private evaluateCustomRollout(
+  private async evaluateCustomRollout(
     rollout: RolloutConfig,
     context: EvaluationContext
-  ): { value: any; reason: string } | null {
+  ): Promise<{ value: any; reason: string } | null> {
     if (!rollout.customRules) return null
 
     for (const rule of rollout.customRules) {
@@ -799,7 +798,7 @@ export class FeatureFlagEvaluator {
     }
 
     // Fallback to first variant
-    const firstVariant = enabledVariants[0]
+    const firstVariant = enabledVariants[0]!
     return {
       value: firstVariant.value,
       reason: 'variant_fallback',
@@ -1093,7 +1092,7 @@ export function createEvaluationContext(
 
   if (request) {
     context.userAgent = request.headers.get('user-agent') || undefined
-    context.ipAddress = request.ip || request.headers.get('x-forwarded-for') || undefined
+    context.ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
     
     // Parse user agent for device/browser info
     if (context.userAgent) {
@@ -1123,7 +1122,7 @@ export async function getServerFeatureFlag(
 }
 
 // React hook for client-side usage
-export function useFeatureFlag(flagId: string, defaultValue?: any) {
+export function useFeatureFlag(_flagId: string, defaultValue?: any) {
   // This would be implemented as a React hook
   // For now, return a placeholder
   return {

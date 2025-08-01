@@ -48,9 +48,15 @@ export function getClientIP(request: NextRequest): string {
   const realIP = request.headers.get('x-real-ip')
   const cfConnectingIP = request.headers.get('cf-connecting-ip')
   
-  if (cfConnectingIP) return cfConnectingIP
-  if (realIP) return realIP
-  if (forwarded) return forwarded.split(',')[0]?.trim() || ''
+  if (cfConnectingIP) {
+    return cfConnectingIP
+  }
+  if (realIP) {
+    return realIP
+  }
+  if (forwarded) {
+    return forwarded.split(',')[0]?.trim() || ''
+  }
   
   return request.ip || 'unknown'
 }
@@ -125,11 +131,15 @@ export class CSRFProtection {
       const decoded = Buffer.from(token, 'base64').toString('utf-8')
       const [receivedSessionId, timestamp, hash] = decoded.split(':')
       
-      if (receivedSessionId !== sessionId) return false
+      if (receivedSessionId !== sessionId) {
+        return false
+      }
       
       // Check if token is not older than 1 hour
       const tokenAge = Date.now() - parseInt(timestamp)
-      if (tokenAge > 3600000) return false
+      if (tokenAge > 3600000) {
+        return false
+      }
       
       const expectedHash = crypto
         .createHmac('sha256', this.secret)
@@ -273,7 +283,7 @@ export class EncryptionUtils {
       throw new Error('Invalid encrypted data format')
     }
     
-    const iv = Buffer.from(ivHex, 'hex')
+    const _iv = Buffer.from(ivHex, 'hex')
     const authTag = Buffer.from(authTagHex, 'hex')
     
     const decipher = crypto.createDecipher(this.algorithm, this.key)

@@ -177,10 +177,10 @@ export async function GET(request: NextRequest) {
         orderBy: { completed_at: 'desc' }
       });
 
-      if (attempts.length === 0) {return 0;}
+      if (attempts.length === 0) return 0;
 
       let streak = 0;
-      const currentDate = new Date();
+      let currentDate = new Date();
       currentDate.setHours(0, 0, 0, 0);
 
       for (const attempt of attempts) {
@@ -291,7 +291,7 @@ export async function POST(request: NextRequest) {
         message: 'Progress updated successfully',
         progress: updatedProgress
       });
-    } 
+    } else {
       // Create new progress record
       const newProgress = await prisma.user_progress.create({
         data: {
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
         message: 'Progress created successfully',
         progress: newProgress
       });
-    
+    }
   } catch (error) {
     // Error updating user progress
     return NextResponse.json(

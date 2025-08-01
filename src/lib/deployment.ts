@@ -377,14 +377,17 @@ class DockerManager {
     onProgress?.(`Building image with command: ${command}`)
     
     try {
-      const { stdout, stderr } = await execAsync(command)
+      const { stderr } = await execAsync(command)
       
       if (stderr && !stderr.includes('WARNING')) {
         throw new Error(stderr)
       }
       
       onProgress?.('Image built successfully')
-      return tags[0] // Return primary tag
+      if (tags.length === 0) {
+        throw new Error('No tags specified for image build')
+      }
+      return tags[0]! // Return primary tag
     } catch (error) {
       throw new Error(`Docker build failed: ${error}`)
     }
@@ -423,7 +426,7 @@ class DockerManager {
 // Kubernetes utilities
 class KubernetesManager {
   static generateDeploymentManifest(config: DeploymentConfig): any {
-    const { name, container, networking } = config
+    const { name, container } = config
     
     return {
       apiVersion: 'apps/v1',
@@ -584,7 +587,7 @@ class KubernetesManager {
     await execAsync(`kubectl rollout undo deployment/${name}${revisionFlag}${namespaceFlag}`)
   }
 
-  private static getReplicaCount(environment: string): number {
+  static getReplicaCount(environment: string): number {
     switch (environment) {
       case 'production':
         return 3
@@ -862,15 +865,9 @@ spec:
 export class DeploymentManager extends EventEmitter {
   private static instance: DeploymentManager
   private deployments: Map<string, DeploymentStatus> = new Map()
-  private dockerManager: DockerManager
-  private kubernetesManager: KubernetesManager
-  private pipelineManager: PipelineManager
 
   private constructor() {
     super()
-    this.dockerManager = new DockerManager()
-    this.kubernetesManager = new KubernetesManager()
-    this.pipelineManager = new PipelineManager()
   }
 
   static getInstance(): DeploymentManager {

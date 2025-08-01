@@ -332,6 +332,9 @@ class EmailProvider extends NotificationProvider {
   }
 
   private getBaseURL(): string {
+    if (!this.config?.provider) {
+      return ''
+    }
     switch (this.config.provider) {
       case 'sendgrid':
         return 'https://api.sendgrid.com/v3'
@@ -346,6 +349,9 @@ class EmailProvider extends NotificationProvider {
 
   async send(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!this.config?.provider) {
+        throw new Error('Email provider configuration is missing')
+      }
       switch (this.config.provider) {
         case 'sendgrid':
           return this.sendWithSendGrid(notification)
@@ -371,7 +377,7 @@ class EmailProvider extends NotificationProvider {
       method: 'POST',
       url: '/mail/send',
       headers: {
-        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Authorization': `Bearer ${this.config?.apiKey || ''}`,
         'Content-Type': 'application/json',
       },
       data: {
@@ -380,8 +386,8 @@ class EmailProvider extends NotificationProvider {
           subject: notification.subject,
         }],
         from: {
-          email: this.config.fromEmail,
-          name: this.config.fromName,
+          email: this.config?.fromEmail || '',
+          name: this.config?.fromName || '',
         },
         content: [
           {
@@ -393,29 +399,30 @@ class EmailProvider extends NotificationProvider {
             value: notification.htmlBody,
           }] : []),
         ],
-        reply_to: this.config.replyTo ? {
+        reply_to: this.config?.replyTo ? {
           email: this.config.replyTo,
         } : undefined,
       },
     })
 
+    const messageId = response.headers?.['x-message-id']
     return {
       success: response.status >= 200 && response.status < 300,
-      messageId: response.headers?.['x-message-id'],
+      ...(messageId && { messageId }),
     }
   }
 
-  private async sendWithMailgun(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  private async sendWithMailgun(_notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     // Implement Mailgun sending logic
     throw new Error('Mailgun provider not implemented')
   }
 
-  private async sendWithPostmark(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  private async sendWithPostmark(_notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     // Implement Postmark sending logic
     throw new Error('Postmark provider not implemented')
   }
 
-  private async sendWithSMTP(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  private async sendWithSMTP(_notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     // Implement SMTP sending logic
     throw new Error('SMTP provider not implemented')
   }
@@ -440,6 +447,9 @@ class PushProvider extends NotificationProvider {
   }
 
   private getBaseURL(): string {
+    if (!this.config?.provider) {
+      return ''
+    }
     switch (this.config.provider) {
       case 'fcm':
         return 'https://fcm.googleapis.com/fcm'
@@ -454,6 +464,9 @@ class PushProvider extends NotificationProvider {
 
   async send(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!this.config?.provider) {
+        throw new Error('Push provider configuration is missing')
+      }
       switch (this.config.provider) {
         case 'fcm':
           return this.sendWithFCM(notification)
@@ -477,7 +490,7 @@ class PushProvider extends NotificationProvider {
       method: 'POST',
       url: '/send',
       headers: {
-        'Authorization': `key=${this.config.serverKey}`,
+        'Authorization': `key=${this.config?.serverKey || ''}`,
         'Content-Type': 'application/json',
       },
       data: {
@@ -497,14 +510,14 @@ class PushProvider extends NotificationProvider {
     }
   }
 
-  private async sendWithOneSignal(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  private async sendWithOneSignal(_notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     // Implement OneSignal sending logic
     throw new Error('OneSignal provider not implemented')
   }
 
-  private async sendWithWebPush(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    // Implement Web Push sending logic
-    throw new Error('Web Push provider not implemented')
+  private async sendWithWebPush(_notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    // Implement WebPush sending logic
+    throw new Error('WebPush provider not implemented')
   }
 
   validateConfig(config: any): boolean {
@@ -527,9 +540,12 @@ class SMSProvider extends NotificationProvider {
   }
 
   private getBaseURL(): string {
+    if (!this.config?.provider) {
+      return ''
+    }
     switch (this.config.provider) {
       case 'twilio':
-        return `https://api.twilio.com/2010-04-01/Accounts/${this.config.accountSid}`
+        return `https://api.twilio.com/2010-04-01/Accounts/${this.config.accountSid || ''}`
       case 'aws-sns':
         return 'https://sns.amazonaws.com'
       case 'nexmo':
@@ -541,6 +557,9 @@ class SMSProvider extends NotificationProvider {
 
   async send(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!this.config?.provider) {
+        throw new Error('SMS provider configuration is missing')
+      }
       switch (this.config.provider) {
         case 'twilio':
           return this.sendWithTwilio(notification)
@@ -560,7 +579,7 @@ class SMSProvider extends NotificationProvider {
   }
 
   private async sendWithTwilio(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    const auth = Buffer.from(`${this.config.accountSid}:${this.config.authToken}`).toString('base64')
+    const auth = Buffer.from(`${this.config?.accountSid || ''}:${this.config?.authToken || ''}`).toString('base64')
     
     const response = await this.apiClient.request({
       method: 'POST',
@@ -570,7 +589,7 @@ class SMSProvider extends NotificationProvider {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       data: new URLSearchParams({
-        From: this.config.fromNumber!,
+        From: this.config?.fromNumber || '',
         To: notification.recipient.phone!,
         Body: notification.body,
       }),
@@ -582,12 +601,12 @@ class SMSProvider extends NotificationProvider {
     }
   }
 
-  private async sendWithAWSSNS(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  private async sendWithAWSSNS(_notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     // Implement AWS SNS sending logic
     throw new Error('AWS SNS provider not implemented')
   }
 
-  private async sendWithNexmo(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  private async sendWithNexmo(_notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     // Implement Nexmo sending logic
     throw new Error('Nexmo provider not implemented')
   }
@@ -605,8 +624,8 @@ class WebhookProvider extends NotificationProvider {
     super()
     this.config = config!
     this.apiClient = new ExternalAPIClient({
-      timeout: config.timeout || 30000,
-      retries: config.retries || 3,
+      timeout: config?.timeout || 30000,
+      retries: config?.retries || 3,
     })
   }
 
@@ -614,11 +633,11 @@ class WebhookProvider extends NotificationProvider {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...this.config.headers,
+        ...this.config?.headers,
       }
 
       // Add authentication headers
-      if (this.config.authentication) {
+      if (this.config?.authentication) {
         switch (this.config.authentication.type) {
           case 'basic':
             const basicAuth = Buffer.from(
@@ -637,8 +656,8 @@ class WebhookProvider extends NotificationProvider {
       }
 
       const response = await this.apiClient.request({
-        method: this.config.method,
-        url: this.config.url,
+        method: this.config?.method || 'POST',
+        url: this.config?.url || '',
         headers,
         data: {
           notification: {
@@ -688,9 +707,9 @@ class SlackProvider extends NotificationProvider {
 
   async send(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      if (this.config.webhookUrl) {
+      if (this.config?.webhookUrl) {
         return this.sendWithWebhook(notification)
-      } else if (this.config.botToken) {
+      } else if (this.config?.botToken) {
         return this.sendWithBot(notification)
       } else {
         throw new Error('No Slack webhook URL or bot token configured')
@@ -706,15 +725,15 @@ class SlackProvider extends NotificationProvider {
   private async sendWithWebhook(notification: Notification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     const response = await this.apiClient.request({
       method: 'POST',
-      url: this.config.webhookUrl!,
+      url: this.config?.webhookUrl || '',
       headers: {
         'Content-Type': 'application/json',
       },
       data: {
         text: notification.body,
-        username: this.config.username,
-        icon_emoji: this.config.iconEmoji,
-        channel: notification.recipient.slackChannel || this.config.channel,
+        username: this.config?.username,
+        icon_emoji: this.config?.iconEmoji,
+        channel: notification.recipient.slackChannel || this.config?.channel,
         attachments: notification.title ? [{
           title: notification.title,
           text: notification.body,
@@ -733,14 +752,14 @@ class SlackProvider extends NotificationProvider {
       method: 'POST',
       url: 'https://slack.com/api/chat.postMessage',
       headers: {
-        'Authorization': `Bearer ${this.config.botToken}`,
+        'Authorization': `Bearer ${this.config?.botToken || ''}`,
         'Content-Type': 'application/json',
       },
       data: {
-        channel: notification.recipient.slackChannel || this.config.channel,
+        channel: notification.recipient.slackChannel || this.config?.channel,
         text: notification.body,
-        username: this.config.username,
-        icon_emoji: this.config.iconEmoji,
+        username: this.config?.username,
+        icon_emoji: this.config?.iconEmoji,
         attachments: notification.title ? [{
           title: notification.title,
           text: notification.body,
@@ -777,10 +796,9 @@ class SlackProvider extends NotificationProvider {
 }
 
 // Notification service
-export class NotificationService extends EventEmitter {
+class NotificationService extends EventEmitter {
   private static instance: NotificationService
   private config: NotificationConfig
-  private cache: CacheService
   private queueManager: QueueManager
   private templates: Map<string, NotificationTemplate> = new Map()
   private channels: Map<string, NotificationChannel> = new Map()
@@ -788,12 +806,11 @@ export class NotificationService extends EventEmitter {
   private notifications: Map<string, Notification> = new Map()
   private batches: Map<string, NotificationBatch> = new Map()
   private metrics: NotificationMetrics
-  private rateLimiters: Map<string, Map<string, number>> = new Map()
+  private rateLimiters: Map<string, Map<number, number>> = new Map()
 
   private constructor(config: Partial<NotificationConfig> = {}) {
     super()
     this.config = { ...defaultNotificationConfig, ...config }
-    this.cache = new CacheService()
     this.queueManager = QueueManager.getInstance()
     this.metrics = {
       totalSent: 0,
@@ -818,13 +835,12 @@ export class NotificationService extends EventEmitter {
 
   private setupQueues(): void {
     // Setup notification processing queue
-    this.queueManager.createQueue('notifications', {
-      concurrency: this.config.batchSize,
-      delay: this.config.batchDelay,
+    const notificationQueue = this.queueManager.getQueue('notifications', {
+      maxConcurrency: this.config.batchSize,
     })
 
     // Process notifications
-    this.queueManager.process('notifications', async (job) => {
+    notificationQueue.process('notification', async (job) => {
       const notification = job.data as Notification
       return this.processNotification(notification)
     })
@@ -874,15 +890,24 @@ export class NotificationService extends EventEmitter {
     const validatedTemplate = notificationTemplateSchema.parse(template)
     
     const fullTemplate: NotificationTemplate = {
-      ...validatedTemplate,
+      id: validatedTemplate.id,
+      name: validatedTemplate.name,
+      type: validatedTemplate.type,
+      body: validatedTemplate.body,
+      variables: validatedTemplate.variables,
+      isActive: validatedTemplate.isActive,
       createdAt: new Date(),
       updatedAt: new Date(),
+      ...(validatedTemplate.subject !== undefined && { subject: validatedTemplate.subject }),
+      ...(validatedTemplate.title !== undefined && { title: validatedTemplate.title }),
+      ...(validatedTemplate.htmlBody !== undefined && { htmlBody: validatedTemplate.htmlBody }),
+      ...(validatedTemplate.metadata !== undefined && { metadata: validatedTemplate.metadata }),
     }
 
     this.templates.set(fullTemplate.id, fullTemplate)
 
     if (this.config.enablePersistence) {
-      await this.cache.set(`notification_template:${fullTemplate.id}`, fullTemplate)
+      await CacheService.set(`notification_template:${fullTemplate.id}`, fullTemplate)
     }
 
     await logger.info('Notification template registered', {
@@ -921,7 +946,7 @@ export class NotificationService extends EventEmitter {
     this.providers.set(fullChannel.id, provider)
 
     if (this.config.enablePersistence) {
-      await this.cache.set(`notification_channel:${fullChannel.id}`, fullChannel)
+      await CacheService.set(`notification_channel:${fullChannel.id}`, fullChannel)
     }
 
     await logger.info('Notification channel registered', {
@@ -963,13 +988,38 @@ export class NotificationService extends EventEmitter {
   async send(notificationData: Omit<Notification, 'id' | 'status' | 'retryCount' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const validatedData = notificationSchema.parse(notificationData)
     
+    // Create recipient object with only defined properties
+    const recipient: NotificationRecipient = {
+      ...(validatedData.recipient.id !== undefined && { id: validatedData.recipient.id }),
+      ...(validatedData.recipient.email !== undefined && { email: validatedData.recipient.email }),
+      ...(validatedData.recipient.phone !== undefined && { phone: validatedData.recipient.phone }),
+      ...(validatedData.recipient.deviceToken !== undefined && { deviceToken: validatedData.recipient.deviceToken }),
+      ...(validatedData.recipient.userId !== undefined && { userId: validatedData.recipient.userId }),
+      ...(validatedData.recipient.webhookUrl !== undefined && { webhookUrl: validatedData.recipient.webhookUrl }),
+      ...(validatedData.recipient.slackChannel !== undefined && { slackChannel: validatedData.recipient.slackChannel }),
+      ...(validatedData.recipient.discordChannel !== undefined && { discordChannel: validatedData.recipient.discordChannel }),
+      ...(validatedData.recipient.teamsChannel !== undefined && { teamsChannel: validatedData.recipient.teamsChannel }),
+    }
+
     const notification: Notification = {
-      ...validatedData,
       id: uuidv4(),
+      type: validatedData.type,
+      priority: validatedData.priority,
       status: 'pending',
+      recipient,
+      body: validatedData.body,
       retryCount: 0,
+      maxRetries: validatedData.maxRetries,
       createdAt: new Date(),
       updatedAt: new Date(),
+      ...(validatedData.templateId !== undefined && { templateId: validatedData.templateId }),
+      ...(validatedData.channelId !== undefined && { channelId: validatedData.channelId }),
+      ...(validatedData.subject !== undefined && { subject: validatedData.subject }),
+      ...(validatedData.title !== undefined && { title: validatedData.title }),
+      ...(validatedData.htmlBody !== undefined && { htmlBody: validatedData.htmlBody }),
+      ...(validatedData.data !== undefined && { data: validatedData.data }),
+      ...(validatedData.metadata !== undefined && { metadata: validatedData.metadata }),
+      ...(validatedData.scheduledAt !== undefined && { scheduledAt: validatedData.scheduledAt }),
     }
 
     // Apply template if specified
@@ -1027,12 +1077,34 @@ export class NotificationService extends EventEmitter {
       const validatedData = notificationSchema.parse(notificationData)
       
       const notification: Notification = {
-        ...validatedData,
         id: uuidv4(),
+        type: validatedData.type,
+        priority: validatedData.priority,
         status: 'pending',
+        recipient: {
+          ...(validatedData.recipient.id !== undefined && { id: validatedData.recipient.id }),
+          ...(validatedData.recipient.email !== undefined && { email: validatedData.recipient.email }),
+          ...(validatedData.recipient.phone !== undefined && { phone: validatedData.recipient.phone }),
+          ...(validatedData.recipient.deviceToken !== undefined && { deviceToken: validatedData.recipient.deviceToken }),
+          ...(validatedData.recipient.userId !== undefined && { userId: validatedData.recipient.userId }),
+          ...(validatedData.recipient.webhookUrl !== undefined && { webhookUrl: validatedData.recipient.webhookUrl }),
+          ...(validatedData.recipient.slackChannel !== undefined && { slackChannel: validatedData.recipient.slackChannel }),
+          ...(validatedData.recipient.discordChannel !== undefined && { discordChannel: validatedData.recipient.discordChannel }),
+          ...(validatedData.recipient.teamsChannel !== undefined && { teamsChannel: validatedData.recipient.teamsChannel }),
+        },
+        body: validatedData.body,
+        maxRetries: validatedData.maxRetries,
         retryCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
+        ...(validatedData.templateId !== undefined && { templateId: validatedData.templateId }),
+        ...(validatedData.channelId !== undefined && { channelId: validatedData.channelId }),
+        ...(validatedData.subject !== undefined && { subject: validatedData.subject }),
+        ...(validatedData.title !== undefined && { title: validatedData.title }),
+        ...(validatedData.htmlBody !== undefined && { htmlBody: validatedData.htmlBody }),
+        ...(validatedData.data !== undefined && { data: validatedData.data }),
+        ...(validatedData.metadata !== undefined && { metadata: validatedData.metadata }),
+        ...(validatedData.scheduledAt !== undefined && { scheduledAt: validatedData.scheduledAt }),
       }
 
       // Apply template if specified
@@ -1166,13 +1238,10 @@ export class NotificationService extends EventEmitter {
   }
 
   private async queueNotification(notification: Notification): Promise<void> {
-    await this.queueManager.addJob('notifications', notification, {
+    await this.queueManager.getQueue('notifications').add('notification', notification, {
       priority: this.getPriorityValue(notification.priority),
-      attempts: notification.maxRetries + 1,
-      backoff: {
-        type: 'exponential',
-        delay: this.config.defaultRetryDelay,
-      },
+      maxAttempts: notification.maxRetries + 1,
+      backoff: 'exponential',
     })
   }
 
@@ -1256,8 +1325,8 @@ export class NotificationService extends EventEmitter {
       notification.updatedAt = new Date()
       
       if (this.config.enablePersistence) {
-        await this.cache.set(`notification:${notification.id}`, notification)
-      }
+      await CacheService.set(`notification:${notification.id}`, notification)
+    }
 
       this.emit('notification:processed', notification)
     }
@@ -1496,7 +1565,7 @@ export class NotificationService extends EventEmitter {
     for (const notificationId of toDelete) {
       this.notifications.delete(notificationId)
       if (this.config.enablePersistence) {
-        await this.cache.delete(`notification:${notificationId}`)
+        await CacheService.delete(`notification:${notificationId}`)
       }
     }
 
@@ -1511,6 +1580,20 @@ export {
   NotificationService,
   notificationSchema,
   notificationTemplateSchema,
+}
+
+export type {
+  Notification,
+  NotificationTemplate,
+  NotificationChannel,
+  NotificationPreferences,
+  NotificationRecipient,
+  NotificationConfig,
+  NotificationMetrics,
+  NotificationBatch,
+  ChannelConfig,
+  RateLimitConfig,
+  RetryConfig
 }
 
 export default notificationService

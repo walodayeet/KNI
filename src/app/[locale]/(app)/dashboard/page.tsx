@@ -74,12 +74,12 @@ export default function Dashboard() {
   const [mockTests, setMockTests] = useState<MockTest[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
   // @ts-ignore
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [_userStats, _setUserStats] = useState<UserStats | null>(null);
   const [recentAttempts, setRecentAttempts] = useState<RecentAttempt[]>([]);
   // @ts-ignore
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [_recommendations, _setRecommendations] = useState<Recommendation[]>([]);
   // @ts-ignore
-  const [weeklyAssignments, setWeeklyAssignments] = useState<WeeklyAssignment[]>([]);
+  const [_weeklyAssignments, _setWeeklyAssignments] = useState<WeeklyAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

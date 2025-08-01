@@ -1,6 +1,5 @@
 import { logger } from './logger'
 import { CacheService } from './cache'
-import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
 
@@ -295,23 +294,6 @@ export interface PluralOptions {
   other: string
 }
 
-// Validation schemas
-const i18nSchemas = {
-  locale: z.string().refine(
-    (locale) => defaultConfig.locales.includes(locale),
-    { message: 'Invalid locale' }
-  ),
-  
-  translationKey: z.string().min(1, 'Translation key cannot be empty'),
-  
-  translationOptions: z.object({
-    count: z.number().optional(),
-    context: z.string().optional(),
-    defaultValue: z.string().optional(),
-    interpolation: z.record(z.any()).optional(),
-    namespace: z.string().optional(),
-  }).optional(),
-}
 
 // Translation manager
 export class TranslationManager {
@@ -616,7 +598,7 @@ export class TranslationManager {
       "'": '&#39;',
     }
     
-    return text.replace(/[&<>"']/g, (match) => htmlEscapes[match])
+    return text.replace(/[&<>"']/g, (match) => htmlEscapes[match] || match)
   }
 
   // Check if translation exists
@@ -714,8 +696,9 @@ export class LocaleDetector {
       .split(',')
       .map(lang => {
         const [locale, quality = '1'] = lang.trim().split(';q=')
-        return { locale: locale.toLowerCase(), quality: parseFloat(quality) }
+        return { locale: locale?.toLowerCase() || '', quality: parseFloat(quality) }
       })
+      .filter(({ locale }) => locale) // Filter out empty locales
       .sort((a, b) => b.quality - a.quality)
     
     // Find best matching locale
@@ -726,8 +709,8 @@ export class LocaleDetector {
       }
       
       // Language match (e.g., 'en-US' -> 'en')
-      const language = locale.split('-')[0]
-      if (this.isValidLocale(language)) {
+      const [language] = locale.split('-')
+      if (language && this.isValidLocale(language)) {
         return language
       }
     }
@@ -745,7 +728,7 @@ export class LocaleDetector {
     const pathname = request.nextUrl.pathname
     const segments = pathname.split('/').filter(Boolean)
     
-    if (segments.length > 0 && this.isValidLocale(segments[0])) {
+    if (segments.length > 0 && segments[0] && this.isValidLocale(segments[0])) {
       return segments[0]
     }
     
@@ -780,7 +763,7 @@ export class FormatUtils {
     currency?: string
   ): string {
     const localeInfo = getLocaleInfo(locale)
-    const currencyCode = currency || localeInfo.currency
+    const currencyCode = currency || localeInfo?.currency || 'USD'
     
     return this.formatNumber(value, locale, {
       style: 'currency',
@@ -797,7 +780,7 @@ export class FormatUtils {
     try {
       return new Intl.DateTimeFormat(locale, options).format(date)
     } catch {
-      return date.toISOString().split('T')[0]
+      return date.toISOString().split('T')[0] || date.toISOString()
     }
   }
 
@@ -971,7 +954,7 @@ export function getLocaleCookie(locale: string): string {
 // Server-side utilities
 export async function getServerLocale(): Promise<string> {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const localeCookie = cookieStore.get(defaultConfig.cookieName)
     
     if (localeCookie && defaultConfig.locales.includes(localeCookie.value)) {

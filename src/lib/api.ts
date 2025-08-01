@@ -268,7 +268,7 @@ export function createApiHandler(
       }
 
       // Validation
-      const validated: any = {}
+      let validated: any = {}
       
       if (options.validation) {
         // Validate body

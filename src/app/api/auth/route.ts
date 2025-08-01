@@ -16,7 +16,7 @@ export const POST = asyncHandler(async (request: Request) => {
   }
 
   const body = await request.json();
-  const {action} = body;
+  const action = body.action;
 
   if (action === 'register') {
     const validatedData = registerSchema.parse(body);
@@ -122,7 +122,7 @@ export const POST = asyncHandler(async (request: Request) => {
       },
       token
     });
-  } 
+  } else {
     throw new ValidationError('Invalid action. Must be "login" or "register"');
-  
+  }
 });

@@ -1,7 +1,6 @@
 import { logger } from './logger'
 import { prisma } from './database'
 import { CacheService } from './cache'
-import { z } from 'zod'
 import os from 'os'
 import { performance } from 'perf_hooks'
 
@@ -311,13 +310,12 @@ class HealthChecks {
     const start = performance.now()
     
     try {
-      const memoryUsage = process.memoryUsage()
       const totalMemory = os.totalmem()
       const freeMemory = os.freemem()
       const usedMemory = totalMemory - freeMemory
       const memoryUsagePercent = usedMemory / totalMemory
       
-      const cpuUsage = os.loadavg()[0] / os.cpus().length
+      const cpuUsage = (os.loadavg()[0] || 0) / os.cpus().length
       
       let status = HealthStatus.HEALTHY
       const issues: string[] = []
@@ -384,7 +382,7 @@ class MetricsCollector {
     return {
       timestamp: new Date(),
       cpu: {
-        usage: os.loadavg()[0] / os.cpus().length,
+        usage: (os.loadavg()[0] || 0) / os.cpus().length,
         loadAverage: os.loadavg(),
       },
       memory: {
@@ -415,7 +413,6 @@ class MetricsCollector {
   static async collectApplicationMetrics(): Promise<ApplicationMetrics> {
     try {
       // Get database metrics
-      const dbConnections = await this.getDatabaseConnections()
       const dbQueries = await this.getDatabaseQueries()
       
       // Get cache metrics
@@ -518,20 +515,23 @@ class MetricsCollector {
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
       
       const [active, online, registered] = await Promise.all([
+        // Use updatedAt as proxy for recent activity (users updated in last 24h)
         prisma.user.count({
           where: {
-            lastActiveAt: {
+            updatedAt: {
               gte: oneDayAgo,
             },
           },
         }),
+        // Use updatedAt as proxy for online users (users updated in last hour)
         prisma.user.count({
           where: {
-            lastActiveAt: {
+            updatedAt: {
               gte: oneHourAgo,
             },
           },
         }),
+        // Total registered users
         prisma.user.count(),
       ])
       
@@ -563,27 +563,37 @@ class MetricsCollector {
     const current = this.counters.get(name) || 0
     this.counters.set(name, current + value)
     
-    this.recordMetric({
+    const metric: PerformanceMetric = {
       id: crypto.randomUUID(),
       type: MetricType.COUNTER,
       name,
       value: current + value,
-      tags,
       timestamp: new Date(),
-    })
+    }
+    
+    if (tags) {
+      metric.tags = tags
+    }
+    
+    this.recordMetric(metric)
   }
 
   static gauge(name: string, value: number, tags?: Record<string, string>) {
     this.gauges.set(name, value)
     
-    this.recordMetric({
+    const metric: PerformanceMetric = {
       id: crypto.randomUUID(),
       type: MetricType.GAUGE,
       name,
       value,
-      tags,
       timestamp: new Date(),
-    })
+    }
+    
+    if (tags) {
+      metric.tags = tags
+    }
+    
+    this.recordMetric(metric)
   }
 
   static timer(name: string, duration: number, tags?: Record<string, string>) {
@@ -597,25 +607,35 @@ class MetricsCollector {
     
     this.timers.set(name, times)
     
-    this.recordMetric({
+    const metric: PerformanceMetric = {
       id: crypto.randomUUID(),
       type: MetricType.TIMER,
       name,
       value: duration,
-      tags,
       timestamp: new Date(),
-    })
+    }
+    
+    if (tags) {
+      metric.tags = tags
+    }
+    
+    this.recordMetric(metric)
   }
 
   static histogram(name: string, value: number, tags?: Record<string, string>) {
-    this.recordMetric({
+    const metric: PerformanceMetric = {
       id: crypto.randomUUID(),
       type: MetricType.HISTOGRAM,
       name,
       value,
-      tags,
       timestamp: new Date(),
-    })
+    }
+    
+    if (tags) {
+      metric.tags = tags
+    }
+    
+    this.recordMetric(metric)
   }
 
   private static recordMetric(metric: PerformanceMetric) {
@@ -685,7 +705,10 @@ class AlertManager {
       message,
       source,
       timestamp: new Date(),
-      metadata,
+    }
+    
+    if (metadata) {
+      alert.metadata = metadata
     }
     
     this.alerts.set(alertId, alert)
@@ -778,8 +801,8 @@ class AlertManager {
   }
 }
 
-// Performance monitor
-export class PerformanceMonitor {
+// Request tracker
+export class RequestTracker {
   private static activeRequests: Map<string, { start: number; metadata: any }> = new Map()
 
   // Start request tracking
@@ -840,7 +863,7 @@ export class PerformanceMonitor {
   static trackCacheOperation(operation: 'hit' | 'miss', key: string) {
     if (!defaultConfig.performance.enabled) return
     
-    MetricsCollector.increment(`cache.${operation}s`)
+    MetricsCollector.increment(`cache.${operation}s`, 1, { key })
   }
 }
 
@@ -892,12 +915,12 @@ export class MonitoringManager {
     
     if (this.healthCheckTimer) {
       clearInterval(this.healthCheckTimer)
-      this.healthCheckTimer = undefined
+      delete this.healthCheckTimer
     }
     
     if (this.metricsTimer) {
       clearInterval(this.metricsTimer)
-      this.metricsTimer = undefined
+      delete this.metricsTimer
     }
     
     await logger.info('Monitoring stopped')
@@ -1075,7 +1098,6 @@ export const monitoringManager = MonitoringManager.getInstance()
 export {
   MetricsCollector,
   AlertManager,
-  PerformanceMonitor,
   HealthChecks,
 }
 

@@ -175,8 +175,8 @@ export default function LoginPage() {
                     </svg>
                   ) : null}
                   {(() => {
-                    if (isLoading) {return t('login.loading');}
-                    if (isLogin) {return t('login.submit');}
+                    if (isLoading) return t('login.loading');
+                    if (isLogin) return t('login.submit');
                     return t('register.submit');
                   })()}
                 </button>

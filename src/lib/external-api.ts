@@ -30,13 +30,13 @@ interface RateLimitConfig {
 
 interface AuthConfig {
   type: 'none' | 'bearer' | 'basic' | 'api-key' | 'oauth2' | 'custom'
-  token?: string
-  username?: string
-  password?: string
-  apiKey?: string
-  headerName?: string
-  oauth2?: OAuth2Config
-  custom?: (request: ExternalAPIRequest) => Promise<ExternalAPIRequest>
+  token?: string | undefined
+  username?: string | undefined
+  password?: string | undefined
+  apiKey?: string | undefined
+  headerName?: string | undefined
+  oauth2?: OAuth2Config | undefined
+  custom?: ((request: ExternalAPIRequest) => Promise<ExternalAPIRequest>) | undefined
 }
 
 interface OAuth2Config {
@@ -94,13 +94,13 @@ interface CircuitBreakerConfig {
 export interface ExternalAPIRequest {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS'
   url: string
-  headers?: Record<string, string>
-  params?: Record<string, any>
+  headers?: Record<string, string> | undefined
+  params?: Record<string, any> | undefined
   data?: any
-  timeout?: number
-  retries?: number
-  cache?: boolean
-  metadata?: Record<string, any>
+  timeout?: number | undefined
+  retries?: number | undefined
+  cache?: boolean | undefined
+  metadata?: Record<string, any> | undefined
 }
 
 export interface ExternalAPIResponse<T = any> {
@@ -195,7 +195,7 @@ const externalAPIConfigSchema = z.object({
 
 // Rate limiter implementation
 class ExternalRateLimiter {
-  private requests: Map<string, number[]> = new Map()
+  private requests: Map<string, number | number[]> = new Map()
   private tokens: Map<string, { count: number; lastRefill: number }> = new Map()
   
   constructor(private config: RateLimitConfig) {}
@@ -223,7 +223,7 @@ class ExternalRateLimiter {
     const windowStart = Math.floor(now / this.config.window) * this.config.window
     const windowKey = `${key}:${windowStart}`
     
-    const count = this.requests.get(windowKey) || 0
+    const count = (this.requests.get(windowKey) as unknown as number) || 0
     const allowed = count < this.config.requests
     
     if (allowed) {
@@ -237,7 +237,7 @@ class ExternalRateLimiter {
   }
 
   private checkSlidingWindow(key: string, now: number): { allowed: boolean; remaining: number; reset: Date } {
-    const requests = this.requests.get(key) || []
+    const requests = this.requests.get(key) as number[] || []
     const windowStart = now - this.config.window
     
     // Remove old requests
@@ -298,9 +298,12 @@ class ExternalRateLimiter {
         }
       } else if (typeof requests === 'number') {
         // Fixed window cleanup
-        const windowStart = parseInt(key.split(':')[1])
-        if (windowStart < cutoff) {
-          this.requests.delete(key)
+        const keyParts = key.split(':')
+        if (keyParts.length > 1 && keyParts[1]) {
+          const windowStart = parseInt(keyParts[1])
+          if (windowStart < cutoff) {
+            this.requests.delete(key)
+          }
         }
       }
     }
@@ -375,7 +378,7 @@ class ExternalAPICache {
   }
 
   private evict(): void {
-    let keyToEvict: string
+    let keyToEvict: string | undefined
     
     switch (this.config.strategy) {
       case 'lru':
@@ -404,9 +407,9 @@ class ExternalAPICache {
     this.accessOrder.push(key)
   }
 
-  private findLeastFrequentlyUsed(): string {
+  private findLeastFrequentlyUsed(): string | undefined {
     let minHits = Infinity
-    let keyToEvict = ''
+    let keyToEvict: string | undefined
     
     for (const [key, entry] of this.cache.entries()) {
       if (entry.hits < minHits) {
@@ -418,9 +421,9 @@ class ExternalAPICache {
     return keyToEvict
   }
 
-  private findOldest(): string {
+  private findOldest(): string | undefined {
     let oldestTime = Infinity
-    let keyToEvict = ''
+    let keyToEvict: string | undefined
     
     for (const [key, entry] of this.cache.entries()) {
       if (entry.created < oldestTime) {
@@ -462,7 +465,7 @@ class ExternalCircuitBreaker {
   private state: 'closed' | 'open' | 'half-open' = 'closed'
   private failures = 0
   private lastFailureTime?: number
-  private nextAttempt?: number
+  private nextAttempt: number | undefined
   
   constructor(private config: CircuitBreakerConfig) {}
 
@@ -509,12 +512,17 @@ class ExternalCircuitBreaker {
     return this.nextAttempt ? Date.now() >= this.nextAttempt : false
   }
 
-  getState(): { state: string; failures: number; lastFailure?: Date } {
-    return {
+  getState(): { state: 'closed' | 'open' | 'half-open'; failures: number; lastFailure?: Date } {
+    const result: { state: 'closed' | 'open' | 'half-open'; failures: number; lastFailure?: Date } = {
       state: this.state,
       failures: this.failures,
-      lastFailure: this.lastFailureTime ? new Date(this.lastFailureTime) : undefined,
     }
+    
+    if (this.lastFailureTime) {
+      result.lastFailure = new Date(this.lastFailureTime)
+    }
+    
+    return result
   }
 }
 
@@ -582,7 +590,7 @@ class ExternalOAuth2TokenManager {
 }
 
 // External API client implementation
-export class ExternalAPIClient extends EventEmitter {
+class ExternalAPIClient extends EventEmitter {
   private config: ExternalAPIConfig
   private rateLimiter: ExternalRateLimiter
   private cache: ExternalAPICache
@@ -923,12 +931,12 @@ export class ExternalAPIClient extends EventEmitter {
     const sorted = [...this.latencyHistory].sort((a, b) => a - b)
     
     this.metrics.latency = {
-      min: sorted[0],
-      max: sorted[sorted.length - 1],
+      min: sorted[0]!,
+      max: sorted[sorted.length - 1]!,
       avg: sorted.reduce((sum, val) => sum + val, 0) / sorted.length,
-      p50: sorted[Math.floor(sorted.length * 0.5)],
-      p95: sorted[Math.floor(sorted.length * 0.95)],
-      p99: sorted[Math.floor(sorted.length * 0.99)],
+      p50: sorted[Math.floor(sorted.length * 0.5)]!,
+      p95: sorted[Math.floor(sorted.length * 0.95)]!,
+      p99: sorted[Math.floor(sorted.length * 0.99)]!,
     }
     
     this.metrics.circuitBreaker = this.circuitBreaker.getState()
@@ -1043,7 +1051,7 @@ export class ExternalAPIClient extends EventEmitter {
 }
 
 // External API service for common integrations
-export class ExternalAPIService {
+class ExternalAPIService {
   private static clients: Map<string, ExternalAPIClient> = new Map()
 
   static createClient(name: string, config: Partial<ExternalAPIConfig>): ExternalAPIClient {

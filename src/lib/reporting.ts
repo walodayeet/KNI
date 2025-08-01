@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { logger } from './logger'
 import { CacheService } from './cache'
 import { EventEmitter } from 'events'
-import { format, subDays } from 'date-fns'
+import { format, subDays, subMonths, subYears } from 'date-fns'
 import ExcelJS from 'exceljs'
 import PDFDocument from 'pdfkit'
 import { createCanvas } from 'canvas'
@@ -387,8 +387,8 @@ class DataAggregator {
       const aValue = a[field]
       const bValue = b[field]
       
-      if (aValue < bValue) {return direction === 'asc' ? -1 : 1}
-      if (aValue > bValue) {return direction === 'asc' ? 1 : -1}
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1
       return 0
     })
   }
@@ -409,7 +409,7 @@ class ChartGenerator {
     const chartData = this.prepareChartData(type, data, options)
     const chartOptions = this.prepareChartOptions(type, options)
 
-    const chart = new Chart(ctx as any, {
+    const _chart = new Chart(ctx as any, {
       type: type as any,
       data: chartData,
       options: chartOptions,
@@ -560,7 +560,7 @@ class ExportManager {
     })
   }
 
-  async exportToExcel(result: ReportResult, options: ExportOptions): Promise<Buffer> {
+  async exportToExcel(result: ReportResult, _options: ExportOptions): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Report')
 
@@ -844,9 +844,23 @@ export class ReportingEngine extends EventEmitter {
   // Evaluate expression for calculated fields
   private evaluateExpression(expression: string, context: Record<string, any>): any {
     try {
-      // Simple expression evaluator (in production, use a proper expression engine)
-      const func = new Function('context', `with(context) { return ${expression}; }`)
-      return func(context)
+      // Simple expression evaluator - only supports basic field access
+      // For security, we only allow simple field access like 'field' or 'field.subfield'
+      if (!/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(expression)) {
+        logger.warn('Invalid expression format', { expression })
+        return null
+      }
+      
+      const parts = expression.split('.')
+      let result = context
+      for (const part of parts) {
+        if (result && typeof result === 'object' && part in result) {
+          result = result[part]
+        } else {
+          return null
+        }
+      }
+      return result
     } catch (error) {
       logger.warn('Failed to evaluate expression', { expression, error })
       return null

@@ -2,7 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { logger } from '@/lib/logger'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/Button'
 import { ExclamationTriangleIcon, ArrowPathIcon, HomeIcon, BugAntIcon } from '@heroicons/react/24/outline'
 
 interface Props {

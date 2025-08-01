@@ -144,7 +144,7 @@ export default function UploadPage() {
           setIsUploading(false);
         }, 1000);
       } else {
-        const error = await response.json();
+        await response.json();
         // Upload failed. Please try again.
         setIsUploading(false);
         setUploadProgress(0);
@@ -168,7 +168,7 @@ export default function UploadPage() {
       if (response.ok) {
         await fetchUploads(); // Refresh the uploads list
       } else {
-        const error = await response.json();
+        await response.json();
         // Failed to delete upload.
       }
     } catch (error) {

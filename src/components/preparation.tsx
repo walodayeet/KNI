@@ -43,12 +43,12 @@ export default function Preparation() {
     );
 
     sectionRefs.current.forEach((section) => {
-      if (section) {observer.observe(section);}
+      if (section) observer.observe(section);
     });
 
     return () => {
       sectionRefs.current.forEach((section) => {
-        if (section) {observer.unobserve(section);}
+        if (section) observer.unobserve(section);
       });
     };
   }, []);

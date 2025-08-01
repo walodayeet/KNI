@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { logger } from '@/lib/logger'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/Button'
 import { ChartBarIcon, ClockIcon, CpuChipIcon, SignalIcon } from '@heroicons/react/24/outline'
 
 interface PerformanceMetrics {

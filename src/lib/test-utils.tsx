@@ -177,7 +177,7 @@ export const testUtils = {
     ) as jest.Mock
   },
 
-  mockApiError: (message = 'API Error', status = 500) => {
+  mockApiError: (message = 'API Error', _status = 500) => {
     global.fetch = jest.fn(() =>
       Promise.reject(new Error(message))
     ) as jest.Mock

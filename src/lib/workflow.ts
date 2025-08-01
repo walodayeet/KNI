@@ -27,7 +27,7 @@ const defaultWorkflowConfig: WorkflowConfig = {
 }
 
 // Workflow interfaces
-interface WorkflowStep {
+export interface WorkflowStep {
   id: string
   name: string
   type: 'action' | 'condition' | 'parallel' | 'sequential' | 'delay' | 'webhook' | 'email' | 'notification'
@@ -39,7 +39,7 @@ interface WorkflowStep {
   condition?: string // JavaScript expression for conditional steps
 }
 
-interface WorkflowDefinition {
+export interface WorkflowDefinition {
   id: string
   name: string
   description?: string
@@ -55,13 +55,13 @@ interface WorkflowDefinition {
   createdBy?: string
 }
 
-interface WorkflowTrigger {
+export interface WorkflowTrigger {
   type: 'manual' | 'scheduled' | 'event' | 'webhook' | 'api'
   config: Record<string, any>
   condition?: string
 }
 
-interface WorkflowInstance {
+export interface WorkflowInstance {
   id: string
   workflowId: string
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused'
@@ -72,11 +72,11 @@ interface WorkflowInstance {
   completedAt?: Date
   error?: string
   executionLog: WorkflowExecutionLog[]
-  triggeredBy?: string
+  triggeredBy?: string | undefined
   metadata?: Record<string, any>
 }
 
-interface WorkflowExecutionLog {
+export interface WorkflowExecutionLog {
   stepId: string
   stepName: string
   status: 'started' | 'completed' | 'failed' | 'skipped'
@@ -88,7 +88,7 @@ interface WorkflowExecutionLog {
   duration?: number
 }
 
-interface WorkflowMetrics {
+export interface WorkflowMetrics {
   totalWorkflows: number
   activeWorkflows: number
   completedWorkflows: number
@@ -147,23 +147,94 @@ abstract class StepExecutor {
   
   protected evaluateCondition(condition: string, context: Record<string, any>): boolean {
     try {
-      // Simple expression evaluator (in production, use a proper expression engine)
-      const func = new Function('context', `with(context) { return ${condition}; }`)
-      return Boolean(func(context))
+      // Simple condition evaluator - only supports basic field access and comparisons
+      // For security, we only allow simple expressions like 'field === value' or 'field.subfield > 10'
+      if (!/^[a-zA-Z_][a-zA-Z0-9_.]*\s*(===|!==|==|!=|>|>=|<|<=)\s*[a-zA-Z0-9_."']+$/.test(condition)) {
+        logger.warn('Invalid condition format', { condition })
+        return false
+      }
+      
+      // Simple parser for basic comparisons
+      const operators = ['===', '!==', '==', '!=', '>=', '<=', '>', '<']
+      let operator = ''
+      let parts: string[] = []
+      
+      for (const op of operators) {
+        if (condition.includes(op)) {
+          operator = op
+          parts = condition.split(op).map(p => p.trim())
+          break
+        }
+      }
+      
+      if (parts.length !== 2) {
+        return false
+      }
+      
+      const leftValue = this.getValueFromContext(parts[0], context)
+      const rightValue = this.parseValue(parts[1], context)
+      
+      switch (operator) {
+        case '===': return leftValue === rightValue
+        case '!==': return leftValue !== rightValue
+        case '==': return leftValue === rightValue
+        case '!=': return leftValue !== rightValue
+        case '>': return leftValue > rightValue
+        case '>=': return leftValue >= rightValue
+        case '<': return leftValue < rightValue
+        case '<=': return leftValue <= rightValue
+        default: return false
+      }
     } catch (error) {
       logger.warn('Failed to evaluate condition', { condition, error })
       return false
     }
   }
+  
+  private getValueFromContext(path: string, context: Record<string, any>): any {
+    const parts = path.split('.')
+    let result = context
+    for (const part of parts) {
+      if (result && typeof result === 'object' && part in result) {
+        result = result[part]
+      } else {
+        return undefined
+      }
+    }
+    return result
+  }
+  
+  private parseValue(value: string, context: Record<string, any>): any {
+    // If it's a quoted string, return the string value
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      return value.slice(1, -1)
+    }
+    
+    // If it's a number, parse it
+    if (/^\d+(\.\d+)?$/.test(value)) {
+      return parseFloat(value)
+    }
+    
+    // If it's a boolean
+    if (value === 'true') {
+      return true
+    }
+    if (value === 'false') {
+      return false
+    }
+    
+    // Otherwise, treat it as a context path
+    return this.getValueFromContext(value, context)
+  }
 }
 
 class ActionStepExecutor extends StepExecutor {
-  async execute(step: WorkflowStep, context: Record<string, any>): Promise<any> {
+  async execute(step: WorkflowStep, _context: Record<string, any>): Promise<any> {
     const { action, params } = step.config
     
     switch (action) {
       case 'log':
-        await logger.info('Workflow action log', { message: params.message, context })
+        await logger.info('Workflow action log', { message: params.message, context: _context })
         return { success: true, message: params.message }
       
       case 'set_variable':
@@ -174,7 +245,7 @@ class ActionStepExecutor extends StepExecutor {
         const response = await fetch(params.url, {
           method: params.method || 'GET',
           headers: params.headers || {},
-          body: params.body ? JSON.stringify(params.body) : undefined,
+          body: params.body ? JSON.stringify(params.body) : null,
         })
         return await response.json()
       
@@ -189,15 +260,15 @@ class ActionStepExecutor extends StepExecutor {
 }
 
 class ConditionStepExecutor extends StepExecutor {
-  async execute(step: WorkflowStep, context: Record<string, any>): Promise<any> {
+  async execute(step: WorkflowStep, _context: Record<string, any>): Promise<any> {
     const { condition } = step.config
-    const result = this.evaluateCondition(condition, context)
+    const result = this.evaluateCondition(condition, _context)
     return { condition: result }
   }
 }
 
 class DelayStepExecutor extends StepExecutor {
-  async execute(step: WorkflowStep, context: Record<string, any>): Promise<any> {
+  async execute(step: WorkflowStep, _context: Record<string, any>): Promise<any> {
     const { duration } = step.config
     await new Promise(resolve => setTimeout(resolve, duration))
     return { delayed: duration }
@@ -210,7 +281,7 @@ class EmailStepExecutor extends StepExecutor {
     
     // Queue email for sending
     const queueManager = QueueManager.getInstance()
-    await queueManager.addJob('email', {
+    await queueManager.getQueue('email').add('email', {
       to,
       subject,
       template,
@@ -227,7 +298,7 @@ class NotificationStepExecutor extends StepExecutor {
     
     // Queue notification for sending
     const queueManager = QueueManager.getInstance()
-    await queueManager.addJob('notification', {
+    await queueManager.getQueue('notifications').add('notification', {
       userId,
       type,
       title,
@@ -263,7 +334,7 @@ class WebhookStepExecutor extends StepExecutor {
 export class WorkflowEngine extends EventEmitter {
   private static instance: WorkflowEngine
   private config: WorkflowConfig
-  private queueManager: QueueManager
+  private queueManager: QueueManager // Reserved for future queue-based workflow execution
   private workflows: Map<string, WorkflowDefinition> = new Map()
   private instances: Map<string, WorkflowInstance> = new Map()
   private stepExecutors: Map<string, StepExecutor> = new Map()
@@ -532,12 +603,84 @@ export class WorkflowEngine extends EventEmitter {
 
   private evaluateCondition(condition: string, context: Record<string, any>): boolean {
     try {
-      const func = new Function('context', `with(context) { return ${condition}; }`)
-      return Boolean(func(context))
+      // Simple condition evaluator - only supports basic field access and comparisons
+      // For security, we only allow simple expressions like 'field === value' or 'field.subfield > 10'
+      if (!/^[a-zA-Z_][a-zA-Z0-9_.]*\s*(===|!==|==|!=|>|>=|<|<=)\s*[a-zA-Z0-9_."']+$/.test(condition)) {
+        logger.warn('Invalid condition format', { condition })
+        return false
+      }
+      
+      // Simple parser for basic comparisons
+      const operators = ['===', '!==', '==', '!=', '>=', '<=', '>', '<']
+      let operator = ''
+      let parts: string[] = []
+      
+      for (const op of operators) {
+        if (condition.includes(op)) {
+          operator = op
+          parts = condition.split(op).map(p => p.trim())
+          break
+        }
+      }
+      
+      if (parts.length !== 2) {
+        return false
+      }
+      
+      const leftValue = this.getValueFromContext(parts[0], context)
+      const rightValue = this.parseValue(parts[1], context)
+      
+      switch (operator) {
+        case '===': return leftValue === rightValue
+        case '!==': return leftValue !== rightValue
+        case '==': return leftValue === rightValue
+        case '!=': return leftValue !== rightValue
+        case '>': return leftValue > rightValue
+        case '>=': return leftValue >= rightValue
+        case '<': return leftValue < rightValue
+        case '<=': return leftValue <= rightValue
+        default: return false
+      }
     } catch (error) {
       logger.warn('Failed to evaluate condition', { condition, error })
       return false
     }
+  }
+  
+  private getValueFromContext(path: string, context: Record<string, any>): any {
+    const parts = path.split('.')
+    let result = context
+    for (const part of parts) {
+      if (result && typeof result === 'object' && part in result) {
+        result = result[part]
+      } else {
+        return undefined
+      }
+    }
+    return result
+  }
+  
+  private parseValue(value: string, context: Record<string, any>): any {
+    // If it's a quoted string, return the string value
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      return value.slice(1, -1)
+    }
+    
+    // If it's a number, parse it
+    if (/^\d+(\.\d+)?$/.test(value)) {
+      return parseFloat(value)
+    }
+    
+    // If it's a boolean
+    if (value === 'true') {
+      return true
+    }
+    if (value === 'false') {
+      return false
+    }
+    
+    // Otherwise, treat it as a context path
+    return this.getValueFromContext(value, context)
   }
 
   // Update metrics

@@ -418,7 +418,7 @@ export class Validator {
   }
 
   // Rate limiting validation
-  static validateRateLimit(identifier: string, limit: number, window: number): boolean {
+  static validateRateLimit(_identifier: string, _limit: number, _window: number): boolean {
     // This would typically use Redis or in-memory store
     // For now, return true (implement with actual rate limiting logic)
     return true

@@ -1,8 +1,16 @@
 import { PrismaClient, Prisma } from '@prisma/client'
 import { logger, PerformanceMonitor } from './logger'
 
+// Re-export Prisma types for convenience
+export type QueryResult<T = any> = T
+export type TransactionOptions = {
+  maxWait?: number
+  timeout?: number
+  isolationLevel?: Prisma.TransactionIsolationLevel
+}
+
 // Database configuration
-interface DatabaseConfig {
+export interface DatabaseConfig {
   maxConnections: number
   connectionTimeout: number
   queryTimeout: number
@@ -23,7 +31,7 @@ const defaultConfig: DatabaseConfig = {
 }
 
 // Database metrics
-interface DatabaseMetrics {
+export interface DatabaseMetrics {
   totalQueries: number
   successfulQueries: number
   failedQueries: number
@@ -53,7 +61,7 @@ class DatabaseManager {
     this.prisma = new PrismaClient({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL,
+          url: process.env.DATABASE_URL || 'postgresql://localhost:5432/kni_db',
         },
       },
       log: this.config.enableLogging
@@ -78,7 +86,10 @@ class DatabaseManager {
 
   private setupEventListeners(): void {
     if (this.config.enableLogging) {
-      this.prisma.$on('query', async (e) => {
+      // Type assertion to handle Prisma event listener types
+      const prismaWithEvents = this.prisma as any
+      
+      prismaWithEvents.$on('query', async (e: any) => {
         await logger.debug('Database Query', {
           query: e.query,
           params: e.params,
@@ -87,14 +98,14 @@ class DatabaseManager {
         })
       })
 
-      this.prisma.$on('error', async (e) => {
+      prismaWithEvents.$on('error', async (e: any) => {
         await logger.error('Database Error', {
           message: e.message,
           target: e.target,
         })
       })
 
-      this.prisma.$on('warn', async (e) => {
+      prismaWithEvents.$on('warn', async (e: any) => {
         await logger.warn('Database Warning', {
           message: e.message,
           target: e.target,
@@ -202,13 +213,18 @@ class DatabaseManager {
       isolationLevel?: Prisma.TransactionIsolationLevel
     }
   ): Promise<T> {
+    const transactionOptions: any = {
+      maxWait: options?.maxWait ?? 5000,
+      timeout: options?.timeout ?? this.config.queryTimeout,
+    }
+    
+    if (options?.isolationLevel) {
+      transactionOptions.isolationLevel = options.isolationLevel
+    }
+    
     return this.executeQuery('transaction', () =>
-      this.prisma.$transaction(operations, {
-        maxWait: options?.maxWait ?? 5000,
-        timeout: options?.timeout ?? this.config.queryTimeout,
-        isolationLevel: options?.isolationLevel,
-      })
-    )
+      this.prisma.$transaction(operations, transactionOptions)
+    ) as Promise<T>
   }
 
   // Health check
@@ -312,14 +328,14 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput> {
 // User repository example
 export class UserRepository extends BaseRepository<
   any, // User type
-  Prisma.UserCreateInput,
-  Prisma.UserUpdateInput
+  Prisma.userCreateInput,
+  Prisma.userUpdateInput
 > {
   constructor() {
     super('user')
   }
 
-  async create(data: Prisma.UserCreateInput) {
+  async create(data: Prisma.userCreateInput) {
     return this.db.executeQuery('user.create', () =>
       this.db.getClient().user.create({ data })
     )
@@ -337,7 +353,7 @@ export class UserRepository extends BaseRepository<
     )
   }
 
-  async update(id: string, data: Prisma.UserUpdateInput) {
+  async update(id: string, data: Prisma.userUpdateInput) {
     return this.db.executeQuery('user.update', () =>
       this.db.getClient().user.update({ where: { id }, data })
     )
@@ -353,7 +369,7 @@ export class UserRepository extends BaseRepository<
     page?: number
     limit?: number
     search?: string
-    orderBy?: Prisma.UserOrderByWithRelationInput
+    orderBy?: Prisma.userOrderByWithRelationInput
   } = {}) {
     const { page = 1, limit = 10, search, orderBy } = options
     const pagination = this.getPaginationParams(page, limit)

@@ -9,7 +9,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } fro
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 // File upload configuration
-interface UploadConfig {
+export interface UploadConfig {
   maxFileSize: number
   allowedMimeTypes: string[]
   allowedExtensions: string[]
@@ -237,7 +237,7 @@ export class FileUploadManager {
   }
 
   // Scan file for viruses
-  private async scanForViruses(buffer: Buffer): Promise<{ clean: boolean; threat?: string }> {
+  private async scanForViruses(_buffer: Buffer): Promise<{ clean: boolean; threat?: string }> {
     if (!this.config.virusScanning.enabled) {
       return { clean: true }
     }
@@ -424,10 +424,8 @@ export class FileUploadManager {
       // Process image if applicable
       const isImage = file.type.startsWith('image/')
       if (isImage && options.processImage && this.config.imageProcessing.enabled) {
-        const processed = await this.processImage(buffer, filename, options)
-        processedBuffer = processed.processedBuffer
-        imageMetadata = processed.metadata
-        thumbnails = processed.thumbnails
+        const imageProcessingResult = await this.processImage(buffer, filename, options)
+        ;({ processedBuffer: processedBuffer, metadata: imageMetadata, thumbnails } = imageProcessingResult)
       }
 
       // Upload main file
@@ -446,14 +444,14 @@ export class FileUploadManager {
 
       if (thumbnails) {
         for (const thumbnail of thumbnails) {
-          const thumbnailUpload = this.config.useCloudStorage
+          const { path: thumbnailPath, url: thumbnailUrl } = this.config.useCloudStorage
             ? await this.uploadToCloud(thumbnail.buffer, thumbnail.filename, file.type, options.folder)
             : await this.uploadToLocal(thumbnail.buffer, thumbnail.filename, options.folder)
           
           uploadedThumbnails.push({
             suffix: thumbnail.suffix,
-            path: thumbnailUpload.path,
-            url: thumbnailUpload.url,
+            path: thumbnailPath,
+            url: thumbnailUrl,
             width: thumbnail.width,
             height: thumbnail.height,
           })
@@ -636,6 +634,9 @@ export class UploadService {
     return this.uploadManager.getUploadStats()
   }
 }
+
+// Type aliases for compatibility
+export type FileMetadata = UploadedFile
 
 // Export singleton instance
 export const fileUploadManager = FileUploadManager.getInstance()
