@@ -101,15 +101,15 @@ export default function Dashboard() {
         if (progressRes.ok) {
           const data = await progressRes.json();
           setUserProgress(data.progress);
-          setUserStats(data.stats);
+          _setUserStats(data.stats);
           setRecentAttempts(data.recentAttempts || []);
           
           // Set recommendations for premium users or assignments for free users
           // Note: Premium status should be determined by user_type, but for now using role-based logic
           if (user.role === 'ADMIN' || user.role === 'TEACHER') {
-            setRecommendations(data.recommendations || []);
+            _setRecommendations(data.recommendations || []);
           } else {
-            setWeeklyAssignments(data.weeklyAssignments || []);
+            _setWeeklyAssignments(data.weeklyAssignments || []);
           }
         }
       } catch (error) {
