@@ -609,7 +609,7 @@ export class NotificationManager {
       let { subject, content } = validatedData
       
       if (validatedData.templateId && validatedData.templateVariables) {
-        const compiled = await this.compileTemplate(
+        const compiled: { subject: string; content: string } = await this.compileTemplate(
           validatedData.templateId,
           validatedData.templateVariables
         )
