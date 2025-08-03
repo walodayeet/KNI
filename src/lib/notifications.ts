@@ -815,7 +815,7 @@ export class NotificationManager {
 
       // Clean up expired notifications
       const expiredCount = this.queue.length
-      this.queue = this.queue.filter(notification => notification.expiresAt > now)
+      this.queue = this.queue.filter(notification => !notification.expiresAt || notification.expiresAt > now)
       const removedExpired = expiredCount - this.queue.length
 
       if (removedExpired > 0) {
