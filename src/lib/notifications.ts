@@ -174,7 +174,7 @@ const notificationSchemas = {
     expiresAt: z.date().optional(),
     metadata: z.record(z.any()).optional(),
   }),
-  
+
   preferences: z.object({
     userId: z.string().uuid(),
     channels: z.object({
@@ -228,7 +228,9 @@ export class NotificationManager {
   }
 
   private async loadTemplates(): Promise<void> {
-    if (!this.config.templates.enabled) return
+    if (!this.config.templates.enabled) {
+      return
+    }
 
     try {
       // Load default templates instead of from database
@@ -239,7 +241,7 @@ export class NotificationManager {
           name: 'Welcome Email',
           type: 'email' as const,
           subject: 'Welcome to {{appName}}!',
-          body: 'Hi {{userName}}, welcome to {{appName}}! We\'re excited to have you on board.',
+          body: "Hi {{userName}}, welcome to {{appName}}! We're excited to have you on board.",
           variables: ['appName', 'userName'],
           active: true,
         },
@@ -270,17 +272,23 @@ export class NotificationManager {
         count: this.templates.size,
       })
     } catch (error) {
-      await logger.error('Failed to load notification templates', {}, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Failed to load notification templates',
+        {},
+        error instanceof Error ? error : new Error(String(error))
+      )
     }
   }
 
   private async getUserPreferences(userId: string): Promise<NotificationPreferences | null> {
     try {
       const cacheKey = `user:${userId}:notification-preferences`
-      
+
       // Try cache first
       const cached = await CacheService.get<NotificationPreferences>(cacheKey)
-      if (cached) return cached
+      if (cached) {
+        return cached
+      }
 
       // Return default preferences since we don't have a database model
       const defaultPreferences: NotificationPreferences = {
@@ -317,21 +325,27 @@ export class NotificationManager {
 
       // Cache preferences
       await CacheService.set(cacheKey, defaultPreferences, 3600) // 1 hour
-      
+
       return defaultPreferences
     } catch (error) {
-      await logger.error('Failed to get user notification preferences', { userId }, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Failed to get user notification preferences',
+        { userId },
+        error instanceof Error ? error : new Error(String(error))
+      )
       return null
     }
   }
 
   private async checkRateLimit(userId: string): Promise<boolean> {
-    if (!this.config.rateLimiting.enabled) return true
+    if (!this.config.rateLimiting.enabled) {
+      return true
+    }
 
     try {
       const key = `notification-rate-limit:${userId}`
-      const current = await CacheService.get<number>(key) || 0
-      
+      const current = (await CacheService.get<number>(key)) || 0
+
       if (current >= this.config.rateLimiting.maxPerUser) {
         return false
       }
@@ -340,13 +354,19 @@ export class NotificationManager {
       await CacheService.set(key, current + 1, this.config.rateLimiting.timeWindow)
       return true
     } catch (error) {
-      await logger.error('Rate limit check failed', { userId }, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Rate limit check failed',
+        { userId },
+        error instanceof Error ? error : new Error(String(error))
+      )
       return true // Allow on error
     }
   }
 
   private isInQuietHours(preferences: NotificationPreferences): boolean {
-    if (!preferences.quietHours.enabled) return false
+    if (!preferences.quietHours.enabled) {
+      return false
+    }
 
     try {
       const now = new Date()
@@ -359,39 +379,42 @@ export class NotificationManager {
 
       const timeParts = userTime.split(':').map(Number)
       const [currentHour, currentMinute] = timeParts
-      
+
       if (currentHour === undefined || currentMinute === undefined) {
         throw new Error('Invalid time format')
       }
-      
+
       const currentMinutes = currentHour * 60 + currentMinute
 
       const startParts = preferences.quietHours.start.split(':').map(Number)
       const [startHour, startMinute] = startParts
-      
+
       if (startHour === undefined || startMinute === undefined) {
         throw new Error('Invalid start time format')
       }
-      
+
       const startMinutes = startHour * 60 + startMinute
 
       const endParts = preferences.quietHours.end.split(':').map(Number)
       const [endHour, endMinute] = endParts
-      
+
       if (endHour === undefined || endMinute === undefined) {
         throw new Error('Invalid end time format')
       }
-      
+
       const endMinutes = endHour * 60 + endMinute
 
       if (startMinutes <= endMinutes) {
         return currentMinutes >= startMinutes && currentMinutes <= endMinutes
-      } else {
-        // Quiet hours span midnight
-        return currentMinutes >= startMinutes || currentMinutes <= endMinutes
       }
+      // Quiet hours span midnight
+      return currentMinutes >= startMinutes || currentMinutes <= endMinutes
     } catch (error) {
-      logger.error('Failed to check quiet hours', { preferences }, error instanceof Error ? error : new Error(String(error)))
+      logger.error(
+        'Failed to check quiet hours',
+        { preferences },
+        error instanceof Error ? error : new Error(String(error))
+      )
       return false
     }
   }
@@ -406,8 +429,8 @@ export class NotificationManager {
     }
 
     // Simple template compilation (in production, use a proper template engine)
-    let subject = template.subject
-    let content = template.content
+    let { subject } = template
+    let { content } = template
 
     for (const [key, value] of Object.entries(variables)) {
       const placeholder = `{{${key}}}`
@@ -425,8 +448,11 @@ export class NotificationManager {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Map channel enum to preferences property
-      const channelKey = channel === NotificationChannel.IN_APP ? 'inApp' : channel as keyof typeof preferences.channels
-      
+      const channelKey =
+        channel === NotificationChannel.IN_APP
+          ? 'inApp'
+          : (channel as keyof typeof preferences.channels)
+
       // Check if channel is enabled for user
       if (!preferences.channels[channelKey]) {
         return { success: false, error: 'Channel disabled by user' }
@@ -437,47 +463,47 @@ export class NotificationManager {
           if (!this.config.channels.email) {
             return { success: false, error: 'Email channel disabled' }
           }
-          
+
           const emailResult = await EmailService.sendNotificationEmail(
             notification.userId, // This should be email address in real implementation
             notification.subject,
             notification.content,
             notification.priority === NotificationPriority.URGENT ? 'high' : 'normal'
           )
-          
+
           return emailResult
 
         case NotificationChannel.PUSH:
           if (!this.config.channels.push) {
             return { success: false, error: 'Push channel disabled' }
           }
-          
+
           // Implement push notification logic here
           await logger.info('Push notification sent', {
             userId: notification.userId,
             subject: notification.subject,
           })
-          
+
           return { success: true }
 
         case NotificationChannel.SMS:
           if (!this.config.channels.sms) {
             return { success: false, error: 'SMS channel disabled' }
           }
-          
+
           // Implement SMS logic here
           await logger.info('SMS notification sent', {
             userId: notification.userId,
             content: notification.content,
           })
-          
+
           return { success: true }
 
         case NotificationChannel.IN_APP:
           if (!this.config.channels.inApp) {
             return { success: false, error: 'In-app channel disabled' }
           }
-          
+
           // Store in memory for in-app display
           const inAppNotification = {
             id: notification.id,
@@ -491,23 +517,23 @@ export class NotificationManager {
             expiresAt: notification.expiresAt,
             metadata: notification.metadata,
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
           }
-          
+
           // Store in cache for retrieval
           await CacheService.set(
             `notification:${notification.id}`,
             JSON.stringify(inAppNotification),
             3600 // 1 hour cache
           )
-          
+
           return { success: true }
 
         case NotificationChannel.REALTIME:
           if (!this.config.channels.realtime || !this.socketServer) {
             return { success: false, error: 'Realtime channel disabled or not configured' }
           }
-          
+
           // Send via Socket.IO
           this.socketServer.to(`user:${notification.userId}`).emit('notification', {
             id: notification.id,
@@ -518,7 +544,7 @@ export class NotificationManager {
             data: notification.data,
             timestamp: new Date(),
           })
-          
+
           return { success: true }
 
         default:
@@ -533,7 +559,9 @@ export class NotificationManager {
   }
 
   // Send notification
-  async send(notificationData: NotificationData): Promise<{ success: boolean; id: string; errors?: string[] }> {
+  async send(
+    notificationData: NotificationData
+  ): Promise<{ success: boolean; id: string; errors?: string[] }> {
     try {
       if (!this.config.enabled) {
         return { success: false, id: '', errors: ['Notifications disabled'] }
@@ -590,31 +618,31 @@ export class NotificationManager {
         const scheduledAt = new Date()
         const endTimeParts = preferences.quietHours.end.split(':')
         const [endHour, endMinute] = endTimeParts
-        
+
         if (!endHour || !endMinute) {
           throw new Error('Invalid quiet hours end time format')
         }
-        
+
         scheduledAt.setHours(parseInt(endHour))
         scheduledAt.setMinutes(parseInt(endMinute))
-        
+
         if (scheduledAt <= new Date()) {
           scheduledAt.setDate(scheduledAt.getDate() + 1)
         }
-        
+
         validatedData.scheduledAt = scheduledAt
       }
 
       // Compile template if provided
       let { subject, content } = validatedData
-      
+
       if (validatedData.templateId && validatedData.templateVariables) {
-        const compiled: { subject: string; content: string } = await this.compileTemplate(
+        const { subject: compiledSubject, content: compiledContent } = await this.compileTemplate(
           validatedData.templateId,
           validatedData.templateVariables
         )
-        subject = compiled.subject
-        content = compiled.content
+        subject = compiledSubject
+        content = compiledContent
       }
 
       // Create queued notification
@@ -628,9 +656,12 @@ export class NotificationManager {
         content,
         data: validatedData.data || {},
         ...(validatedData.templateId && { templateId: validatedData.templateId }),
-        ...(validatedData.templateVariables && { templateVariables: validatedData.templateVariables }),
+        ...(validatedData.templateVariables && {
+          templateVariables: validatedData.templateVariables,
+        }),
         ...(validatedData.scheduledAt && { scheduledAt: validatedData.scheduledAt }),
-        expiresAt: validatedData.expiresAt || new Date(Date.now() + this.config.defaultExpiry * 1000),
+        expiresAt:
+          validatedData.expiresAt || new Date(Date.now() + this.config.defaultExpiry * 1000),
         ...(validatedData.metadata && { metadata: validatedData.metadata }),
         status: NotificationStatus.PENDING,
         attempts: 0,
@@ -650,7 +681,11 @@ export class NotificationManager {
 
       return { success: true, id: notificationId }
     } catch (error) {
-      await logger.error('Failed to send notification', { notificationData }, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Failed to send notification',
+        { notificationData },
+        error instanceof Error ? error : new Error(String(error))
+      )
       return {
         success: false,
         id: '',
@@ -671,7 +706,9 @@ export class NotificationManager {
   }
 
   private async processQueue(): Promise<void> {
-    if (this.isProcessing || this.queue.length === 0) return
+    if (this.isProcessing || this.queue.length === 0) {
+      return
+    }
 
     this.isProcessing = true
 
@@ -697,11 +734,16 @@ export class NotificationManager {
           }
 
           const results: { channel: NotificationChannel; success: boolean; error?: string }[] = []
-          
+
           // Filter channels based on user preferences
-          const enabledChannels = notification.channels.filter(
-            channel => preferences.channels[channel]
-          )
+          const enabledChannels = notification.channels.filter(channel => {
+            // Map channel enum to preferences property
+            const channelKey =
+              channel === NotificationChannel.IN_APP
+                ? 'inApp'
+                : (channel as keyof typeof preferences.channels)
+            return preferences.channels[channelKey]
+          })
 
           // Send to each enabled channel
           for (const channel of enabledChannels) {
@@ -716,10 +758,10 @@ export class NotificationManager {
           if (successfulChannels.length > 0) {
             notification.status = NotificationStatus.SENT
             notification.updatedAt = new Date()
-            
+
             // Remove from queue if sent successfully
             this.queue = this.queue.filter(n => n.id !== notification.id)
-            
+
             await logger.info('Notification sent successfully', {
               id: notification.id,
               successfulChannels: successfulChannels.map(c => c.channel),
@@ -729,13 +771,13 @@ export class NotificationManager {
             notification.attempts++
             notification.lastAttempt = new Date()
             notification.error = failedChannels.map(c => `${c.channel}: ${c.error}`).join(', ')
-            
+
             if (notification.attempts >= this.config.retryAttempts) {
               notification.status = NotificationStatus.FAILED
-              
+
               // Remove from queue
               this.queue = this.queue.filter(n => n.id !== notification.id)
-              
+
               await logger.error('Notification failed permanently', {
                 id: notification.id,
                 attempts: notification.attempts,
@@ -746,7 +788,7 @@ export class NotificationManager {
               notification.scheduledAt = new Date(
                 Date.now() + this.config.retryDelay * notification.attempts
               )
-              
+
               await logger.warn('Notification failed, retrying', {
                 id: notification.id,
                 attempts: notification.attempts,
@@ -759,11 +801,15 @@ export class NotificationManager {
           notification.attempts++
           notification.lastAttempt = new Date()
           notification.error = error instanceof Error ? error.message : String(error)
-          
-          await logger.error('Error processing notification', {
-            id: notification.id,
-            error: notification.error,
-          }, error instanceof Error ? error : new Error(String(error)))
+
+          await logger.error(
+            'Error processing notification',
+            {
+              id: notification.id,
+              error: notification.error,
+            },
+            error instanceof Error ? error : new Error(String(error))
+          )
         }
       }
 
@@ -771,12 +817,16 @@ export class NotificationManager {
       const expiredCount = this.queue.length
       this.queue = this.queue.filter(notification => notification.expiresAt > now)
       const removedExpired = expiredCount - this.queue.length
-      
+
       if (removedExpired > 0) {
         await logger.info('Removed expired notifications', { count: removedExpired })
       }
     } catch (error) {
-      await logger.error('Queue processing error', {}, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Queue processing error',
+        {},
+        error instanceof Error ? error : new Error(String(error))
+      )
     } finally {
       this.isProcessing = false
     }
@@ -794,11 +844,11 @@ export class NotificationManager {
   ): Promise<{ notifications: any[]; total: number; unreadCount: number }> {
     try {
       const where: any = { userId }
-      
+
       if (options.unreadOnly) {
         where.status = { not: NotificationStatus.READ }
       }
-      
+
       if (options.type) {
         where.type = options.type
       }
@@ -807,24 +857,30 @@ export class NotificationManager {
       const cacheKey = `user:${userId}:notifications`
       const cachedData = await CacheService.get(cacheKey)
       let userNotifications: any[] = []
-      
+
       if (cachedData) {
         userNotifications = JSON.parse(cachedData)
       }
-      
+
       // Filter notifications
-      let filteredNotifications = userNotifications.filter(n => {
-        if (options.unreadOnly && n.status === NotificationStatus.READ) return false
-        if (options.type && n.type !== options.type) return false
+      const filteredNotifications = userNotifications.filter(n => {
+        if (options.unreadOnly && n.status === NotificationStatus.READ) {
+          return false
+        }
+        if (options.type && n.type !== options.type) {
+          return false
+        }
         return true
       })
-      
+
       // Sort by creation time (newest first)
-      filteredNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      
+      filteredNotifications.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+
       const total = filteredNotifications.length
       const unreadCount = userNotifications.filter(n => n.status !== NotificationStatus.READ).length
-      
+
       // Apply pagination
       const offset = options.offset || 0
       const limit = options.limit || 50
@@ -832,7 +888,11 @@ export class NotificationManager {
 
       return { notifications, total, unreadCount }
     } catch (error) {
-      await logger.error('Failed to get user notifications', { userId, options }, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Failed to get user notifications',
+        { userId, options },
+        error instanceof Error ? error : new Error(String(error))
+      )
       return { notifications: [], total: 0, unreadCount: 0 }
     }
   }
@@ -844,21 +904,21 @@ export class NotificationManager {
       const cacheKey = `user:${userId}:notifications`
       const cachedData = await CacheService.get(cacheKey)
       let userNotifications: any[] = []
-      
+
       if (cachedData) {
         userNotifications = JSON.parse(cachedData)
       }
-      
+
       // Find and update the notification
       const notificationIndex = userNotifications.findIndex(n => n.id === notificationId)
       if (notificationIndex !== -1) {
         userNotifications[notificationIndex].status = NotificationStatus.READ
         userNotifications[notificationIndex].readAt = new Date()
         userNotifications[notificationIndex].updatedAt = new Date()
-        
+
         // Update cache
         await CacheService.set(cacheKey, JSON.stringify(userNotifications), 3600)
-        
+
         // Also update individual notification cache
         await CacheService.set(
           `notification:${notificationId}`,
@@ -866,10 +926,14 @@ export class NotificationManager {
           3600
         )
       }
-      
+
       return true
     } catch (error) {
-      await logger.error('Failed to mark notification as read', { notificationId, userId }, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Failed to mark notification as read',
+        { notificationId, userId },
+        error instanceof Error ? error : new Error(String(error))
+      )
       return false
     }
   }
@@ -880,15 +944,15 @@ export class NotificationManager {
       // Get user notifications from cache
       const cacheKey = `user_notifications:${userId}`
       const cachedNotifications = await CacheService.get(cacheKey)
-      
+
       if (!cachedNotifications) {
         return 0
       }
-      
+
       const notifications = JSON.parse(cachedNotifications)
       let updatedCount = 0
       const now = new Date()
-      
+
       // Update unread notifications to read status
       const updatedNotifications = notifications.map((notification: any) => {
         if (notification.status !== NotificationStatus.READ) {
@@ -897,15 +961,15 @@ export class NotificationManager {
             ...notification,
             status: NotificationStatus.READ,
             readAt: now.toISOString(),
-            updatedAt: now.toISOString()
+            updatedAt: now.toISOString(),
           }
         }
         return notification
       })
-      
+
       // Update cache with modified notifications
       await CacheService.set(cacheKey, JSON.stringify(updatedNotifications), 3600) // 1 hour
-      
+
       // Update individual notification caches
       for (const notification of updatedNotifications) {
         if (notification.status === NotificationStatus.READ) {
@@ -913,10 +977,14 @@ export class NotificationManager {
           await CacheService.set(notificationCacheKey, JSON.stringify(notification), 3600)
         }
       }
-      
+
       return updatedCount
     } catch (error) {
-      await logger.error('Failed to mark all notifications as read', { userId }, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Failed to mark all notifications as read',
+        { userId },
+        error instanceof Error ? error : new Error(String(error))
+      )
       return 0
     }
   }
@@ -931,7 +999,7 @@ export class NotificationManager {
         userId,
         ...preferences,
       })
-      
+
       if (!validation.success) {
         await logger.error('Invalid notification preferences', {
           userId,
@@ -949,14 +1017,18 @@ export class NotificationManager {
         types: validation.data.types,
         quietHours: validation.data.quietHours,
         frequency: validation.data.frequency,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }
-      
+
       await CacheService.set(cacheKey, JSON.stringify(preferencesData), 3600) // 1 hour
-      
+
       return true
     } catch (error) {
-      await logger.error('Failed to update notification preferences', { userId, preferences }, error instanceof Error ? error : new Error(String(error)))
+      await logger.error(
+        'Failed to update notification preferences',
+        { userId, preferences },
+        error instanceof Error ? error : new Error(String(error))
+      )
       return false
     }
   }
@@ -999,7 +1071,7 @@ export class NotificationService {
       priority: NotificationPriority.NORMAL,
       channels: [NotificationChannel.EMAIL, NotificationChannel.IN_APP],
       subject: 'Welcome to KNI Platform!',
-      content: 'Welcome to our platform! We\'re excited to have you on board.',
+      content: "Welcome to our platform! We're excited to have you on board.",
     })
   }
 
@@ -1014,7 +1086,11 @@ export class NotificationService {
       userId,
       type: NotificationType.INVITATION,
       priority: NotificationPriority.HIGH,
-      channels: [NotificationChannel.EMAIL, NotificationChannel.IN_APP, NotificationChannel.REALTIME],
+      channels: [
+        NotificationChannel.EMAIL,
+        NotificationChannel.IN_APP,
+        NotificationChannel.REALTIME,
+      ],
       subject: `Test Invitation: ${testTitle}`,
       content: `You have been invited to take the test "${testTitle}". Due date: ${dueDate}`,
       data: { testUrl, dueDate },
@@ -1091,16 +1167,12 @@ export class NotificationService {
         content: message,
       })
     )
-    
+
     return Promise.all(promises)
   }
 
   // Error notification
-  static async sendErrorNotification(
-    userId: string,
-    error: string,
-    context?: Record<string, any>
-  ) {
+  static async sendErrorNotification(userId: string, error: string, context?: Record<string, any>) {
     return this.notificationManager.send({
       userId,
       type: NotificationType.ERROR,
