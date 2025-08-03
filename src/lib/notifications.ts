@@ -613,7 +613,8 @@ export class NotificationManager {
           validatedData.templateId,
           validatedData.templateVariables
         )
-        ({ subject, content } = compiled)
+        subject = compiled.subject
+        content = compiled.content
       }
 
       // Create queued notification
