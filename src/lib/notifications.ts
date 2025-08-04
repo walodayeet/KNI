@@ -858,8 +858,10 @@ export class NotificationManager {
       const cachedData = await CacheService.get(cacheKey)
       let userNotifications: any[] = []
 
-      if (cachedData) {
-        userNotifications = JSON.parse(cachedData)
+      if (typeof cachedData === "string") {
+        userNotifications = JSON.parse(cachedData) as any[]
+      } else if (Array.isArray(cachedData)) {
+        userNotifications = cachedData
       }
 
       // Filter notifications
@@ -905,8 +907,10 @@ export class NotificationManager {
       const cachedData = await CacheService.get(cacheKey)
       let userNotifications: any[] = []
 
-      if (cachedData) {
-        userNotifications = JSON.parse(cachedData)
+      if (typeof cachedData === "string") {
+        userNotifications = JSON.parse(cachedData) as any[]
+      } else if (Array.isArray(cachedData)) {
+        userNotifications = cachedData
       }
 
       // Find and update the notification
@@ -945,11 +949,13 @@ export class NotificationManager {
       const cacheKey = `user_notifications:${userId}`
       const cachedNotifications = await CacheService.get(cacheKey)
 
-      if (!cachedNotifications) {
+      if (!cachedNotifications || (typeof cachedNotifications !== "string" && !Array.isArray(cachedNotifications))) {
         return 0
       }
 
-      const notifications = JSON.parse(cachedNotifications)
+      const notifications = typeof cachedNotifications === "string"
+        ? JSON.parse(cachedNotifications)
+        : cachedNotifications
       let updatedCount = 0
       const now = new Date()
 
