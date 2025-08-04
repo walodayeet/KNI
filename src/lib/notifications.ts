@@ -1186,7 +1186,7 @@ export class NotificationService {
       channels: [NotificationChannel.IN_APP, NotificationChannel.REALTIME],
       subject: 'Error Occurred',
       content: `An error occurred: ${error}`,
-      data: context,
+      data: context || {},
     })
   }
 
