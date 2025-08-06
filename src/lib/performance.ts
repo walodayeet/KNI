@@ -376,37 +376,7 @@ interface PerformanceRecommendation {
   actions: string[]
 }
 
-// Zod schemas
-const performanceConfigSchema = z.object({
-  monitoring: z.object({
-    enabled: z.boolean(),
-    metricsInterval: z.number(),
-    alertThresholds: z.object({
-      responseTime: z.number(),
-      memoryUsage: z.number(),
-      cpuUsage: z.number(),
-      errorRate: z.number(),
-      throughput: z.number(),
-    }),
-  }),
-  optimization: z.object({
-    lazyLoading: z.boolean(),
-    codesplitting: z.boolean(),
-    treeshaking: z.boolean(),
-    minification: z.boolean(),
-    imageOptimization: z.boolean(),
-  }),
-  caching: z.object({
-    strategies: z.array(z.object({
-      name: z.string(),
-      type: z.enum(['memory', 'redis', 'cdn', 'browser', 'service-worker']),
-      ttl: z.number(),
-      maxSize: z.number(),
-      compression: z.boolean(),
-      patterns: z.array(z.string()),
-    })),
-  }),
-})
+
 
 // Performance monitor
 class PerformanceMonitor {
