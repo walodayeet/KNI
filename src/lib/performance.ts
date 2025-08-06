@@ -3,7 +3,6 @@ import { logger } from './logger'
 import { CacheService } from './cache'
 import { EventEmitter } from 'events'
 import { performance, PerformanceObserver } from 'perf_hooks'
-import { Worker } from 'worker_threads'
 import cluster from 'cluster'
 import os from 'os'
 
