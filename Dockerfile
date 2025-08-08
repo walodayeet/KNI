@@ -3,7 +3,7 @@ FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++ cairo-dev jpeg-dev pango-dev giflib-dev
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
@@ -15,7 +15,7 @@ RUN npm ci --legacy-peer-deps
 
 # Install production dependencies
 FROM base AS production-deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++ cairo-dev jpeg-dev pango-dev giflib-dev
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
