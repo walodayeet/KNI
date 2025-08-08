@@ -1,20 +1,20 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
     image: postgres:15
     container_name: testas-postgres
     environment:
-      POSTGRES_DB: testas_db
-      POSTGRES_USER: testas_user
-      POSTGRES_PASSWORD: your_password
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./prisma/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testas_user -d testas_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -22,13 +22,15 @@ services:
   redis:
     image: redis:7-alpine
     container_name: testas-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-dev-redis-password-2024}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: sh -c "redis-server --appendonly yes --requirepass $$REDIS_PASSWORD"
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-dev-redis-password-2024}", "ping"]
+      test: ["CMD", "sh", "-c", 'redis-cli --no-auth-warning -a "$$REDIS_PASSWORD" ping']
       interval: 30s
       timeout: 10s
       retries: 3
