@@ -21,8 +21,12 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 # Set dummy DATABASE_URL for prisma generate during build
 ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
-RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
+# Install all dependencies first (including dev deps for prisma generate)
+RUN npm ci --legacy-peer-deps
+# Generate Prisma client
 RUN npx prisma generate
+# Remove dev dependencies and clean cache
+RUN npm prune --omit=dev && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
