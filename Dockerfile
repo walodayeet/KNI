@@ -26,7 +26,7 @@ RUN npm ci --legacy-peer-deps
 # Generate Prisma client
 RUN npx prisma generate
 # Remove dev dependencies and clean cache
-RUN npm prune --omit=dev && npm cache clean --force
+RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
