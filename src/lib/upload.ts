@@ -58,9 +58,9 @@ const defaultConfig: UploadConfig = {
     provider: (process.env.CLOUD_STORAGE_PROVIDER as 'aws' | 'gcp' | 'azure') || 'aws',
     bucket: process.env.CLOUD_STORAGE_BUCKET || '',
     region: process.env.CLOUD_STORAGE_REGION || 'us-east-1',
-    accessKeyId: process.env.CLOUD_STORAGE_ACCESS_KEY_ID,
-    secretAccessKey: process.env.CLOUD_STORAGE_SECRET_ACCESS_KEY,
-    endpoint: process.env.CLOUD_STORAGE_ENDPOINT,
+    ...(process.env.CLOUD_STORAGE_ACCESS_KEY_ID && { accessKeyId: process.env.CLOUD_STORAGE_ACCESS_KEY_ID }),
+    ...(process.env.CLOUD_STORAGE_SECRET_ACCESS_KEY && { secretAccessKey: process.env.CLOUD_STORAGE_SECRET_ACCESS_KEY }),
+    ...(process.env.CLOUD_STORAGE_ENDPOINT && { endpoint: process.env.CLOUD_STORAGE_ENDPOINT }),
   },
   imageProcessing: {
     enabled: process.env.IMAGE_PROCESSING_ENABLED === 'true',
@@ -77,8 +77,8 @@ const defaultConfig: UploadConfig = {
   },
   virusScanning: {
     enabled: process.env.VIRUS_SCANNING_ENABLED === 'true',
-    apiKey: process.env.VIRUS_SCAN_API_KEY,
-    endpoint: process.env.VIRUS_SCAN_ENDPOINT,
+    ...(process.env.VIRUS_SCAN_API_KEY && { apiKey: process.env.VIRUS_SCAN_API_KEY }),
+    ...(process.env.VIRUS_SCAN_ENDPOINT && { endpoint: process.env.VIRUS_SCAN_ENDPOINT }),
   },
 }
 
@@ -161,14 +161,19 @@ export class FileUploadManager {
 
   private initializeCloudStorage(): void {
     if (this.config.useCloudStorage && this.config.cloudStorage.provider === 'aws') {
-      this.s3Client = new S3Client({
+      const s3Config: any = {
         region: this.config.cloudStorage.region,
         credentials: {
           accessKeyId: this.config.cloudStorage.accessKeyId || '',
           secretAccessKey: this.config.cloudStorage.secretAccessKey || '',
         },
-        endpoint: this.config.cloudStorage.endpoint,
-      })
+      }
+      
+      if (this.config.cloudStorage.endpoint) {
+        s3Config.endpoint = this.config.cloudStorage.endpoint
+      }
+      
+      this.s3Client = new S3Client(s3Config)
     }
   }
 
@@ -315,9 +320,9 @@ export class FileUploadManager {
         metadata: {
           width: processedMetadata.width || 0,
           height: processedMetadata.height || 0,
-          exif: metadata.exif,
+          ...(metadata.exif && typeof metadata.exif === 'object' && { exif: metadata.exif as Record<string, any> }),
         },
-        thumbnails,
+        ...(thumbnails && { thumbnails }),
       }
     } catch (error) {
       await logger.error('Image processing failed', { filename }, error instanceof Error ? error : new Error(String(error)))
@@ -387,7 +392,7 @@ export class FileUploadManager {
       if (!optionsValidation.success) {
         return {
           success: false,
-          validationErrors: optionsValidation.errors?.map(e => e.message),
+          ...(optionsValidation.errors && { validationErrors: optionsValidation.errors.map(e => e.message) }),
         }
       }
 
@@ -396,7 +401,7 @@ export class FileUploadManager {
       if (!fileValidation.valid) {
         return {
           success: false,
-          validationErrors: fileValidation.errors,
+          ...(fileValidation.errors.length > 0 && { validationErrors: fileValidation.errors }),
         }
       }
 
@@ -467,12 +472,12 @@ export class FileUploadManager {
         size: processedBuffer.length,
         path: uploadResult.path,
         url: uploadResult.url,
-        thumbnails: uploadedThumbnails.length > 0 ? uploadedThumbnails : undefined,
+        ...(uploadedThumbnails.length > 0 && { thumbnails: uploadedThumbnails }),
         metadata: {
           uploadedAt: new Date(),
-          uploadedBy: options.userId,
-          dimensions: imageMetadata,
-          exif: imageMetadata?.exif,
+          ...(options.userId && { uploadedBy: options.userId }),
+          ...(imageMetadata && { dimensions: { width: imageMetadata.width, height: imageMetadata.height } }),
+          ...(imageMetadata?.exif && { exif: imageMetadata.exif }),
           ...options.metadata,
         },
       }

@@ -3,8 +3,6 @@ import { render, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { AuthProvider } from '@/context/AuthContext'
-import { ToastProvider } from '@/context/ToastContext'
-import { I18nProvider } from '@/context/I18nContext'
 
 // Mock implementations for testing
 const mockUser = {
@@ -47,9 +45,6 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   withAuth?: boolean
   withQueryClient?: boolean
   withTheme?: boolean
-  withToast?: boolean
-  withI18n?: boolean
-  initialAuthState?: Partial<typeof mockAuthContext>
   queryClientOptions?: ConstructorParameters<typeof QueryClient>[0]
 }
 
@@ -58,9 +53,6 @@ function createWrapper(options: CustomRenderOptions = {}) {
     withAuth = true,
     withQueryClient = true,
     withTheme = true,
-    withToast = true,
-    withI18n = true,
-    initialAuthState = {},
     queryClientOptions = {},
   } = options
 
@@ -98,30 +90,13 @@ function createWrapper(options: CustomRenderOptions = {}) {
       )
     }
 
-    // Wrap with I18n Provider
-    if (withI18n) {
-      const i18nValue = { ...mockI18nContext, ...initialAuthState }
-      component = (
-        <I18nProvider value={i18nValue}>
-          {component}
-        </I18nProvider>
-      )
-    }
+    // Note: I18n and Toast providers are mocked for testing
+    // but not actually wrapped since the context files don't exist
 
-    // Wrap with Toast Provider
-    if (withToast) {
-      component = (
-        <ToastProvider value={mockToastContext}>
-          {component}
-        </ToastProvider>
-      )
-    }
-
-    // Wrap with Auth Provider
+    // Wrap with Auth Provider (using actual provider for testing)
     if (withAuth) {
-      const authValue = { ...mockAuthContext, ...initialAuthState }
       component = (
-        <AuthProvider value={authValue}>
+        <AuthProvider>
           {component}
         </AuthProvider>
       )
@@ -158,7 +133,7 @@ export const testUtils = {
 
   // Common test helpers
   waitForLoadingToFinish: async () => {
-    const { waitForElementToBeRemoved } = await import('@testing-library/react')
+    const { waitForElementToBeRemoved } = await import('@testing-library/dom')
     await waitForElementToBeRemoved(
       () => document.querySelector('[data-testid="loading"]'),
       { timeout: 3000 }

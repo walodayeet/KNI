@@ -97,13 +97,14 @@ export class Queue extends EventEmitter {
   private activeJobs: Set<string> = new Set()
   private metrics: QueueMetrics
   private processingTimer: NodeJS.Timeout | null = null
-  private cache: CacheService
+
   private processingTimes: number[] = []
 
   constructor(name: string, config: Partial<QueueConfig> = {}) {
     super()
+    void name // Acknowledge name parameter to avoid unused variable error
     this.config = { ...defaultQueueConfig, ...config }
-    this.cache = new CacheService()
+    // CacheService uses static methods, no instance needed
     this.metrics = {
       totalJobs: 0,
       completedJobs: 0,
@@ -135,9 +136,9 @@ export class Queue extends EventEmitter {
       attempts: 0,
       maxAttempts: validatedOptions.maxAttempts,
       createdAt: new Date(),
-      scheduledAt: validatedOptions.delay > 0 
-        ? new Date(Date.now() + validatedOptions.delay)
-        : undefined,
+      ...(validatedOptions.delay > 0 && {
+        scheduledAt: new Date(Date.now() + validatedOptions.delay)
+      }),
     }
 
     // Validate job
@@ -361,6 +362,7 @@ export class Queue extends EventEmitter {
   private updateProcessingMetrics(processingTime: number, success: boolean): void {
     if (!this.config.enableMetrics) return
 
+    void success // Acknowledge success parameter to avoid unused variable error
     this.processingTimes.push(processingTime)
     
     // Keep only last 1000 processing times
@@ -381,7 +383,7 @@ export class Queue extends EventEmitter {
   // Persist job to cache/database
   private async persistJob(job: BaseJob): Promise<void> {
     try {
-      await this.cache.set(`queue:job:${job.id}`, job, 86400) // 24 hours
+      await CacheService.set(`queue:job:${job.id}`, job, 86400) // 24 hours
     } catch (error) {
       await logger.error('Failed to persist job', { jobId: job.id }, error instanceof Error ? error : new Error(String(error)))
     }
@@ -395,7 +397,7 @@ export class Queue extends EventEmitter {
     // Try to load from persistence
     if (this.config.enablePersistence) {
       try {
-        const persistedJob = await this.cache.get<BaseJob>(`queue:job:${jobId}`)
+        const persistedJob = await CacheService.get<BaseJob>(`queue:job:${jobId}`)
         if (persistedJob) {
           this.jobs.set(jobId, persistedJob)
           return persistedJob
@@ -421,7 +423,7 @@ export class Queue extends EventEmitter {
     this.jobs.delete(jobId)
     
     if (this.config.enablePersistence) {
-      await this.cache.delete(`queue:job:${jobId}`)
+      await CacheService.delete(`queue:job:${jobId}`)
     }
 
     await logger.info('Job removed from queue', { jobId })
@@ -475,7 +477,7 @@ export class Queue extends EventEmitter {
       if (shouldRemove) {
         this.jobs.delete(jobId)
         if (this.config.enablePersistence) {
-          await this.cache.delete(`queue:job:${jobId}`)
+          await CacheService.delete(`queue:job:${jobId}`)
         }
         removedCount++
       }
@@ -499,7 +501,9 @@ export class QueueManager {
   private static instance: QueueManager
   private queues: Map<string, Queue> = new Map()
 
-  private constructor() {}
+  private constructor() {
+    // Private constructor for singleton pattern
+  }
 
   static getInstance(): QueueManager {
     if (!QueueManager.instance) {

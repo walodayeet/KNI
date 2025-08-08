@@ -1,5 +1,4 @@
 import { logger } from './logger'
-import { CacheService } from './cache'
 import { EventEmitter } from 'events'
 import { performance, PerformanceObserver } from 'perf_hooks'
 import cluster from 'cluster'
@@ -125,10 +124,10 @@ interface ChunkConfig {
 }
 
 interface BundleOptimizationConfig {
-  minimize: boolean
-  concatenate: boolean
-  dedupe: boolean
-  sideEffects: boolean
+  minimize?: boolean
+  concatenate?: boolean
+  dedupe?: boolean
+  sideEffects?: boolean
 }
 
 interface DatabaseOptimizationConfig {
@@ -379,7 +378,6 @@ interface PerformanceRecommendation {
 
 // Performance monitor
 class PerformanceMonitor {
-  private metrics: PerformanceMetrics[] = []
   private measurements: Map<string, PerformanceMeasurement> = new Map()
   private observer?: PerformanceObserver
   private config: MonitoringConfig
@@ -398,7 +396,7 @@ class PerformanceMonitor {
       }
     })
 
-    this.observer.observe({ entryTypes: ['measure', 'navigation', 'resource', 'paint'] })
+    this.observer.observe({ entryTypes: ['measure'] })
   }
 
   private recordEntry(entry: PerformanceEntry): void {
@@ -446,7 +444,7 @@ class PerformanceMonitor {
       id,
       name,
       startTime: performance.now(),
-      metadata,
+      ...(metadata && { metadata }),
     }
 
     this.measurements.set(id, measurement)
@@ -503,8 +501,8 @@ class PerformanceMonitor {
       p50: this.percentile(durations, 0.5),
       p95: this.percentile(durations, 0.95),
       p99: this.percentile(durations, 0.99),
-      min: durations[0],
-      max: durations[durations.length - 1],
+      min: durations[0] ?? 0,
+      max: durations[durations.length - 1] ?? 0,
     }
   }
 
@@ -588,8 +586,9 @@ class PerformanceMonitor {
   }
 
   private percentile(values: number[], p: number): number {
+    if (values.length === 0) return 0
     const index = Math.ceil(values.length * p) - 1
-    return values[Math.max(0, index)]
+    return values[Math.max(0, index)] ?? 0
   }
 
   private generateId(): string {
@@ -612,18 +611,15 @@ class PerformanceMonitor {
   cleanup(): void {
     this.observer?.disconnect()
     this.measurements.clear()
-    this.metrics = []
   }
 }
 
 // Performance optimizer
 class PerformanceOptimizer {
   private config: OptimizationConfig
-  private cache: CacheService
 
-  constructor(config: OptimizationConfig, cache: CacheService) {
+  constructor(config: OptimizationConfig) {
     this.config = config
-    this.cache = cache
   }
 
   // Optimize images
@@ -633,7 +629,8 @@ class PerformanceOptimizer {
     }
 
     // This would typically use sharp or similar library
-    // For now, return original buffer
+    // For now, return original buffer (options would be used for actual optimization)
+    void options // Acknowledge options parameter to avoid unused variable error
     return buffer
   }
 
@@ -659,7 +656,7 @@ class PerformanceOptimizer {
   }
 
   // Optimize bundle
-  async optimizeBundle(code: string, options: BundleOptimizationOptions = {}): Promise<string> {
+  async optimizeBundle(code: string, options: BundleOptimizationConfig = {}): Promise<string> {
     let optimized = code
 
     if (options.minimize) {
@@ -812,15 +809,13 @@ export class PerformanceManager extends EventEmitter {
   private monitor: PerformanceMonitor
   private optimizer: PerformanceOptimizer
   private analyzer: PerformanceAnalyzer
-  private cache: CacheService
   private metricsInterval?: NodeJS.Timeout
 
   private constructor(config: PerformanceConfig) {
     super()
     this.config = config
-    this.cache = new CacheService()
     this.monitor = new PerformanceMonitor(config.monitoring)
-    this.optimizer = new PerformanceOptimizer(config.optimization, this.cache)
+    this.optimizer = new PerformanceOptimizer(config.optimization)
     this.analyzer = new PerformanceAnalyzer(this.monitor, config)
     
     this.setupMetricsCollection()
@@ -924,7 +919,7 @@ export class PerformanceManager extends EventEmitter {
   }
 
   // Optimize bundle
-  async optimizeBundle(code: string, options?: BundleOptimizationOptions): Promise<string> {
+  async optimizeBundle(code: string, options?: BundleOptimizationConfig): Promise<string> {
     return this.optimizer.optimizeBundle(code, options)
   }
 

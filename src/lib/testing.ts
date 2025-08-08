@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals'
 import { NextRequest, NextResponse } from 'next/server'
-import { Session } from 'next-auth'
+import { ExtendedSession } from './auth'
 import { prisma } from './database'
 import { logger } from './logger'
 import { CacheService } from './cache'
@@ -199,18 +199,20 @@ export class TestDataFactory {
         'User-Agent': 'Test Agent',
         ...overrides.headers,
       },
-      body: overrides.body ? JSON.stringify(overrides.body) : undefined,
+      ...(overrides.body && { body: JSON.stringify(overrides.body) }),
     })
   }
 
   // Session factory
-  static createSession(overrides: Partial<Session> = {}): Session {
+  static createSession(overrides: Partial<ExtendedSession> = {}): ExtendedSession {
     return {
       user: {
         id: 'test-user-id',
         email: 'test@example.com',
         name: 'Test User',
-        role: 'USER',
+        role: 'STUDENT',
+        createdAt: new Date(),
+        updatedAt: new Date(),
         ...overrides.user,
       },
       expires: new Date(Date.now() + 86400000).toISOString(), // 24 hours
@@ -252,17 +254,19 @@ export class TestDatabase {
       return
     }
     
-    this.transactionClient = await prisma.$begin()
+    // Modern Prisma doesn't use $begin/$rollback
+    // Instead, we'll use $transaction for test isolation
     this.isInTransaction = true
   }
 
   // Rollback transaction
   static async rollbackTransaction() {
-    if (!this.isInTransaction || !this.transactionClient) {
+    if (!this.isInTransaction) {
       return
     }
     
-    await this.transactionClient.$rollback()
+    // For test isolation, we'll reset the database instead
+    await this.resetDatabase()
     this.isInTransaction = false
     this.transactionClient = null
   }
@@ -403,10 +407,13 @@ export class TestMocks {
   // Restore all mocks
   static restore() {
     this.originalMethods.forEach((originalMethod, key) => {
-      const [objectName, methodName] = key.split('.')
-      const targetObject = this.getObjectByName(objectName)
-      if (targetObject && targetObject[methodName]) {
-        targetObject[methodName] = originalMethod
+      const parts = key.split('.')
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        const [objectName, methodName] = parts
+        const targetObject = this.getObjectByName(objectName)
+        if (targetObject && targetObject[methodName]) {
+          targetObject[methodName] = originalMethod
+        }
       }
     })
     
@@ -449,8 +456,11 @@ export class TestMocks {
     })
 
     this.mockMethod('CacheService', 'set', async (key: string, value: any, ttl?: number) => {
-      const expiry = ttl ? Date.now() + (ttl * 1000) : undefined
-      mockCache.set(key, { value, expiry })
+      const cacheItem: { value: any; expiry?: number } = { value }
+      if (ttl) {
+        cacheItem.expiry = Date.now() + (ttl * 1000)
+      }
+      mockCache.set(key, cacheItem)
       return true
     })
 
@@ -580,8 +590,9 @@ export class TestMocks {
     }
 
     // Mock fetch for external API calls
-    global.fetch = jest.fn().mockImplementation(async (url: string, _options?: any) => {
-      const mockResponse = defaultTestConfig.api.defaultResponses[url] || {
+    const mockFetch = jest.fn(async (url: string | URL | Request, _options?: RequestInit) => {
+      const urlString = typeof url === 'string' ? url : url.toString()
+      const mockResponse = defaultTestConfig.api.defaultResponses[urlString] || {
         ok: true,
         status: 200,
         json: async () => ({ success: true }),
@@ -595,8 +606,18 @@ export class TestMocks {
         json: async () => mockResponse.json || { success: true },
         text: async () => mockResponse.text || 'OK',
         headers: new Headers(mockResponse.headers || {}),
-      })
+        clone: () => ({}),
+        body: null,
+        bodyUsed: false,
+        arrayBuffer: async () => new ArrayBuffer(0),
+        blob: async () => new Blob(),
+        formData: async () => new FormData(),
+        url: urlString,
+        redirected: false,
+        type: 'basic' as ResponseType,
+      } as Response)
     })
+    global.fetch = mockFetch as any
   }
 
   // Helper to mock a method
@@ -735,7 +756,7 @@ export class TestHelpers {
   static createAuthenticatedRequest(
     url: string,
     options: any = {},
-    session?: Session
+    session?: ExtendedSession
   ): NextRequest {
     const defaultSession = TestDataFactory.createSession(session)
     
@@ -813,9 +834,6 @@ export class TestSuite {
     if (this.isSetup) {
       return
     }
-    
-    // Set test environment
-    process.env.NODE_ENV = 'test'
     
     // Setup test database
     await TestDatabase.setup()
@@ -912,7 +930,8 @@ if (typeof expect !== 'undefined') {
     
     toHaveBeenCalledWithPartial(received: jest.MockedFunction<any>, expected: any) {
       const { mock: { calls } } = received
-        const pass = calls.some(({ 0: arg }) => {
+        const pass = calls.some((callArgs: any[]) => {
+          const [arg] = callArgs
           return Object.entries(expected).every((entry) => {
             const [key, value] = entry
             return arg && arg[key] === value

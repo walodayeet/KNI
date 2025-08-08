@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { logger } from './logger'
 import { CacheService } from './cache'
 import { EventEmitter } from 'events'
-import { format, subDays, subMonths, subYears } from 'date-fns'
+import { format, subDays } from 'date-fns'
 import ExcelJS from 'exceljs'
 import PDFDocument from 'pdfkit'
 import { createCanvas } from 'canvas'
@@ -409,7 +409,7 @@ class ChartGenerator {
     const chartData = this.prepareChartData(type, data, options)
     const chartOptions = this.prepareChartOptions(type, options)
 
-    const _chart = new Chart(ctx as any, {
+    new Chart(ctx as any, {
       type: type as any,
       data: chartData,
       options: chartOptions,
@@ -492,7 +492,7 @@ class ChartGenerator {
     
     const result: string[] = []
     for (let i = 0; i < count; i++) {
-      result.push(colors[i % colors.length])
+      result.push(colors[i % colors.length]!)
     }
     return result
   }
@@ -530,9 +530,12 @@ class ExportManager {
 
       // Add chart if available
       if (options.includeCharts && result.visualization?.imageUrl) {
-        const imageBuffer = Buffer.from(result.visualization.imageUrl.split(',')[1], 'base64')
-        doc.image(imageBuffer, { width: 400 })
-        doc.moveDown()
+        const [, base64Data] = result.visualization.imageUrl.split(',')
+        if (base64Data) {
+          const imageBuffer = Buffer.from(base64Data, 'base64')
+          doc.image(imageBuffer, { width: 400 })
+          doc.moveDown()
+        }
       }
 
       // Add data table
@@ -628,20 +631,16 @@ class ExportManager {
 export class ReportingEngine extends EventEmitter {
   private static instance: ReportingEngine
   private config: ReportingConfig
-  private cache: CacheService
   private chartGenerator: ChartGenerator
   private exportManager: ExportManager
-  private dataAggregator: DataAggregator
   private reports: Map<string, ReportDefinition> = new Map()
   private dashboards: Map<string, DashboardDefinition> = new Map()
 
   private constructor(config: Partial<ReportingConfig> = {}) {
     super()
     this.config = { ...defaultReportingConfig, ...config }
-    this.cache = new CacheService()
     this.chartGenerator = new ChartGenerator(this.config.chartDefaults)
     this.exportManager = new ExportManager()
-    this.dataAggregator = new DataAggregator()
   }
 
   static getInstance(config?: Partial<ReportingConfig>): ReportingEngine {
@@ -691,7 +690,7 @@ export class ReportingEngine extends EventEmitter {
     // Check cache
     const cacheKey = `report:${reportId}:${JSON.stringify({ parameters, filters, pagination })}`
     if (this.config.enableCaching) {
-      const cachedResult = await this.cache.get<ReportResult>(cacheKey)
+      const cachedResult = await CacheService.get<ReportResult>(cacheKey)
       if (cachedResult) {
         return cachedResult
       }
@@ -745,7 +744,7 @@ export class ReportingEngine extends EventEmitter {
         dataSource: report.dataSource.type,
         lastUpdated: new Date(),
       },
-      visualization,
+      ...(visualization && { visualization }),
       generatedAt: new Date(),
       parameters,
       filters,
@@ -753,7 +752,7 @@ export class ReportingEngine extends EventEmitter {
 
     // Cache result
     if (this.config.enableCaching) {
-      await this.cache.set(cacheKey, result, this.config.cacheTimeout)
+      await CacheService.set(cacheKey, result, this.config.cacheTimeout)
     }
 
     await logger.info('Report generated', {
@@ -786,7 +785,7 @@ export class ReportingEngine extends EventEmitter {
       
       case 'cache':
         // Get data from cache
-        const cachedData = await this.cache.get<any[]>(dataSource.connection)
+        const cachedData = await CacheService.get<any[]>(dataSource.connection)
         return cachedData || []
       
       case 'file':
@@ -885,7 +884,10 @@ export class ReportingEngine extends EventEmitter {
         return await this.exportManager.exportToJSON(result)
       case 'png':
         if (result.visualization?.imageUrl) {
-          return Buffer.from(result.visualization.imageUrl.split(',')[1], 'base64')
+          const [, base64Data] = result.visualization.imageUrl.split(',')
+          if (base64Data) {
+            return Buffer.from(base64Data, 'base64')
+          }
         }
         throw new Error('No chart available for PNG export')
       default:

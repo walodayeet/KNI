@@ -145,7 +145,6 @@ export class WebhookManager extends EventEmitter {
   private endpoints: Map<string, WebhookEndpoint> = new Map()
   private incomingWebhooks: Map<string, IncomingWebhook> = new Map()
   private deliveries: Map<string, WebhookDelivery> = new Map()
-  private cache: CacheService
   private metrics: WebhookMetrics
   private deliveryTimes: number[] = []
   private rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map()
@@ -153,7 +152,7 @@ export class WebhookManager extends EventEmitter {
   private constructor(config: Partial<WebhookConfig> = {}) {
     super()
     this.config = { ...defaultWebhookConfig, ...config }
-    this.cache = new CacheService()
+
     this.metrics = {
       totalDeliveries: 0,
       successfulDeliveries: 0,
@@ -192,7 +191,7 @@ export class WebhookManager extends EventEmitter {
     this.endpoints.set(endpointId, webhookEndpoint)
     
     // Persist endpoint
-    await this.cache.set(`webhook:endpoint:${endpointId}`, webhookEndpoint, 86400 * 30) // 30 days
+    await CacheService.set(`webhook:endpoint:${endpointId}`, webhookEndpoint, 86400 * 30) // 30 days
 
     await logger.info('Webhook endpoint registered', {
       endpointId,
@@ -222,7 +221,7 @@ export class WebhookManager extends EventEmitter {
     this.incomingWebhooks.set(webhookId, incomingWebhook)
     
     // Persist webhook (excluding processor function)
-    await this.cache.set(`webhook:incoming:${webhookId}`, validationData, 86400 * 30) // 30 days
+    await CacheService.set(`webhook:incoming:${webhookId}`, validationData, 86400 * 30) // 30 days
 
     await logger.info('Incoming webhook registered', {
       webhookId,
@@ -614,7 +613,7 @@ export class WebhookManager extends EventEmitter {
     webhookEndpointSchema.parse(updatedEndpoint)
 
     this.endpoints.set(endpointId, updatedEndpoint)
-    await this.cache.set(`webhook:endpoint:${endpointId}`, updatedEndpoint, 86400 * 30)
+    await CacheService.set(`webhook:endpoint:${endpointId}`, updatedEndpoint, 86400 * 30)
 
     await logger.info('Webhook endpoint updated', { endpointId, updates })
     this.emit('endpoint:updated', updatedEndpoint)
@@ -628,7 +627,7 @@ export class WebhookManager extends EventEmitter {
     }
 
     this.endpoints.delete(endpointId)
-    await this.cache.delete(`webhook:endpoint:${endpointId}`)
+    await CacheService.delete(`webhook:endpoint:${endpointId}`)
 
     await logger.info('Webhook endpoint deleted', { endpointId })
     this.emit('endpoint:deleted', endpoint)
@@ -689,7 +688,7 @@ export const webhookManager = WebhookManager.getInstance()
 
 // Setup webhook queue processor
 const webhookQueue = queueManager.getQueue('webhooks')
-webhookQueue.process(JobTypes.WEBHOOK, async (job, data) => {
+webhookQueue.process(JobTypes.WEBHOOK, async (_job, data) => {
   if (data.type === 'outgoing') {
     await webhookManager.processDelivery(data.deliveryId)
   }

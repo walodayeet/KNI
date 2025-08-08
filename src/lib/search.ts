@@ -192,15 +192,6 @@ interface SearchResultStats {
 }
 
 // Zod schemas
-const searchFieldSchema = z.object({
-  name: z.string(),
-  type: z.enum(['text', 'keyword', 'number', 'date', 'boolean']),
-  weight: z.number().min(0).max(10),
-  searchable: z.boolean(),
-  filterable: z.boolean(),
-  sortable: z.boolean(),
-  facetable: z.boolean(),
-})
 
 const searchDocumentSchema = z.object({
   id: z.string(),
@@ -259,7 +250,7 @@ class TextProcessor {
   private stopWords: Set<string>
   private synonyms: Map<string, string[]>
 
-  constructor(config: SearchConfig) {
+  constructor() {
     this.stopWords = new Set([
       'a',
       'an',
@@ -380,7 +371,6 @@ class TextProcessor {
 export class SearchEngine extends EventEmitter {
   private static instance: SearchEngine
   private config: SearchConfig
-  private cache: CacheService
   private textProcessor: TextProcessor
   private indexes: Map<string, SearchIndex> = new Map()
   private fuseInstances: Map<string, Fuse<SearchDocument>> = new Map()
@@ -390,8 +380,7 @@ export class SearchEngine extends EventEmitter {
   private constructor(config: Partial<SearchConfig> = {}) {
     super()
     this.config = { ...defaultSearchConfig, ...config }
-    this.cache = new CacheService()
-    this.textProcessor = new TextProcessor(this.config)
+    this.textProcessor = new TextProcessor()
     this.analytics = {
       totalQueries: 0,
       uniqueQueries: 0,
@@ -552,7 +541,7 @@ export class SearchEngine extends EventEmitter {
     // Check cache
     const cacheKey = `search:${indexId}:${JSON.stringify(searchQuery)}`
     if (this.config.enableCaching) {
-      const cachedResult = await this.cache.get<SearchResult>(cacheKey)
+      const cachedResult = await CacheService.get<SearchResult>(cacheKey)
       if (cachedResult) {
         this.trackQuery(searchQuery.query, Date.now() - startTime, cachedResult.total)
         return cachedResult
@@ -609,15 +598,15 @@ export class SearchEngine extends EventEmitter {
       total,
       page: pagination.page,
       size: pagination.size,
-      facets,
-      suggestions,
+      ...(facets && { facets }),
+      ...(suggestions && { suggestions }),
       executionTime,
       query: searchQuery.query,
     }
 
     // Cache result
     if (this.config.enableCaching) {
-      await this.cache.set(cacheKey, result, this.config.cacheTimeout)
+      await CacheService.set(cacheKey, result, this.config.cacheTimeout)
     }
 
     // Track analytics
@@ -810,7 +799,6 @@ export class SearchEngine extends EventEmitter {
 
   // Generate search suggestions
   private generateSuggestions(query: string, index: SearchIndex): string[] {
-    const suggestions: string[] = []
     const queryLower = query.toLowerCase()
 
     // Find similar terms in document titles and content

@@ -1,6 +1,5 @@
 import { Server as SocketIOServer } from 'socket.io'
 import { Server as HTTPServer } from 'http'
-import { NextApiRequest } from 'next'
 import { logger } from './logger'
 import { CacheService } from './cache'
 import { z } from 'zod'
@@ -106,13 +105,7 @@ const presenceDataSchema = z.object({
   metadata: z.record(z.any()).optional(),
 })
 
-const roomSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.enum(['public', 'private', 'protected']),
-  metadata: z.record(z.any()).optional(),
-  createdBy: z.string().optional(),
-})
+
 
 // Real-time manager
 export class RealtimeManager extends EventEmitter {
@@ -122,7 +115,6 @@ export class RealtimeManager extends EventEmitter {
   private connectedUsers: Map<string, ConnectedUser> = new Map()
   private rooms: Map<string, Room> = new Map()
   private presence: Map<string, PresenceData> = new Map()
-  private cache: CacheService
   private metrics: RealtimeMetrics
   private messageCount = 0
   private latencyMeasurements: number[] = []
@@ -131,7 +123,7 @@ export class RealtimeManager extends EventEmitter {
   private constructor(config: Partial<RealtimeConfig> = {}) {
     super()
     this.config = { ...defaultRealtimeConfig, ...config }
-    this.cache = new CacheService()
+    // CacheService uses static methods
     this.metrics = {
       totalConnections: 0,
       activeConnections: 0,
@@ -164,7 +156,6 @@ export class RealtimeManager extends EventEmitter {
       pingInterval: this.config.heartbeatInterval,
       pingTimeout: this.config.heartbeatTimeout,
       maxHttpBufferSize: 1e6, // 1MB
-      compression: this.config.enableCompression,
       transports: ['websocket', 'polling'],
     })
 
@@ -214,7 +205,7 @@ export class RealtimeManager extends EventEmitter {
     // Create connected user
     const connectedUser: ConnectedUser = {
       id: socketId,
-      userId,
+      ...(userId && { userId }),
       socketId,
       rooms: new Set(),
       metadata: {},
@@ -345,7 +336,7 @@ export class RealtimeManager extends EventEmitter {
       type: data.type || 'message',
       data: data.data || data,
       room: data.room,
-      userId: user.userId,
+      ...(user.userId && { userId: user.userId }),
       timestamp: new Date(),
       metadata: data.metadata,
     }
@@ -398,7 +389,7 @@ export class RealtimeManager extends EventEmitter {
         members: new Set(),
         metadata: metadata || {},
         createdAt: new Date(),
-        createdBy: user.userId,
+        ...(user.userId && { createdBy: user.userId }),
       }
       this.rooms.set(roomId, room)
       this.metrics.totalRooms++
@@ -483,7 +474,7 @@ export class RealtimeManager extends EventEmitter {
       userId,
       status,
       lastSeen: new Date(),
-      metadata,
+      ...(metadata && { metadata }),
     }
 
     // Validate presence data
@@ -492,7 +483,7 @@ export class RealtimeManager extends EventEmitter {
     this.presence.set(userId, presenceData)
     
     // Cache presence data
-    await this.cache.set(`presence:${userId}`, presenceData, 3600) // 1 hour
+    await CacheService.set(`presence:${userId}`, presenceData, 3600) // 1 hour
 
     // Broadcast presence update
     await this.broadcast('presence:updated', presenceData)
@@ -562,8 +553,9 @@ export class RealtimeManager extends EventEmitter {
     
     if (!presence) {
       // Try to load from cache
-      presence = await this.cache.get<PresenceData>(`presence:${userId}`)
-      if (presence) {
+      const cachedPresence = await CacheService.get<PresenceData>(`presence:${userId}`)
+      if (cachedPresence) {
+        presence = cachedPresence
         this.presence.set(userId, presence)
       }
     }

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { headers } from 'next/headers'
 import crypto from 'crypto'
 
 // Rate limiting store (in production, use Redis)
@@ -58,7 +57,7 @@ export function getClientIP(request: NextRequest): string {
     return forwarded.split(',')[0]?.trim() || ''
   }
   
-  return request.ip || 'unknown'
+  return 'unknown'
 }
 
 // Rate limiting middleware
@@ -136,6 +135,9 @@ export class CSRFProtection {
       }
       
       // Check if token is not older than 1 hour
+      if (!timestamp) {
+        return false
+      }
       const tokenAge = Date.now() - parseInt(timestamp)
       if (tokenAge > 3600000) {
         return false
@@ -266,12 +268,12 @@ export class EncryptionUtils {
   
   static encrypt(text: string): string {
     const iv = crypto.randomBytes(16)
-    const cipher = crypto.createCipher(this.algorithm, this.key)
+    const cipher = crypto.createCipheriv(this.algorithm, this.key, iv)
     
     let encrypted = cipher.update(text, 'utf8', 'hex')
     encrypted += cipher.final('hex')
     
-    const authTag = cipher.getAuthTag()
+    const authTag = (cipher as any).getAuthTag()
     
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
   }
@@ -283,11 +285,11 @@ export class EncryptionUtils {
       throw new Error('Invalid encrypted data format')
     }
     
-    const _iv = Buffer.from(ivHex, 'hex')
+    const iv = Buffer.from(ivHex, 'hex')
     const authTag = Buffer.from(authTagHex, 'hex')
     
-    const decipher = crypto.createDecipher(this.algorithm, this.key)
-    decipher.setAuthTag(authTag)
+    const decipher = crypto.createDecipheriv(this.algorithm, this.key, iv)
+    ;(decipher as any).setAuthTag(authTag)
     
     let decrypted = decipher.update(encrypted, 'hex', 'utf8')
     decrypted += decipher.final('utf8')

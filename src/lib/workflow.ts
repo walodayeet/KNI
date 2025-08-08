@@ -167,7 +167,7 @@ abstract class StepExecutor {
         }
       }
       
-      if (parts.length !== 2) {
+      if (parts.length !== 2 || !parts[0] || !parts[1]) {
         return false
       }
       
@@ -334,7 +334,8 @@ class WebhookStepExecutor extends StepExecutor {
 export class WorkflowEngine extends EventEmitter {
   private static instance: WorkflowEngine
   private config: WorkflowConfig
-  private queueManager: QueueManager // Reserved for future queue-based workflow execution
+  // @ts-ignore - Reserved for future queue-based workflow execution
+  private _queueManager: QueueManager
   private workflows: Map<string, WorkflowDefinition> = new Map()
   private instances: Map<string, WorkflowInstance> = new Map()
   private stepExecutors: Map<string, StepExecutor> = new Map()
@@ -344,7 +345,7 @@ export class WorkflowEngine extends EventEmitter {
   private constructor(config: Partial<WorkflowConfig> = {}) {
     super()
     this.config = { ...defaultWorkflowConfig, ...config }
-    this.queueManager = QueueManager.getInstance()
+    this._queueManager = QueueManager.getInstance()
     this.metrics = {
       totalWorkflows: 0,
       activeWorkflows: 0,
@@ -623,7 +624,7 @@ export class WorkflowEngine extends EventEmitter {
         }
       }
       
-      if (parts.length !== 2) {
+      if (parts.length !== 2 || !parts[0] || !parts[1]) {
         return false
       }
       

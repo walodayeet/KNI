@@ -312,7 +312,7 @@ export class Validator {
               issue.message,
               issue.path.join('.'),
               issue.code,
-              issue.received
+              'received' in issue ? issue.received : undefined
             )
           )
         }
@@ -388,8 +388,8 @@ export class Validator {
       for (const field of sanitizeOptions.stringFields) {
         if (typeof sanitizedData[field] === 'string') {
           sanitizedData[field] = this.sanitizeString(sanitizedData[field], {
-            maxLength: sanitizeOptions.maxLength,
-            allowHtml: sanitizeOptions.allowHtml,
+            ...(sanitizeOptions.maxLength !== undefined && { maxLength: sanitizeOptions.maxLength }),
+            ...(sanitizeOptions.allowHtml !== undefined && { allowHtml: sanitizeOptions.allowHtml }),
           })
         }
       }
@@ -409,11 +409,11 @@ export class Validator {
   }
 
   // Validate file upload
-  static validateFile(file: {
+  static async validateFile(file: {
     name: string
     size: number
     type: string
-  }): ValidationResult<typeof file> {
+  }): Promise<ValidationResult<typeof file>> {
     return this.validate(customSchemas.fileUpload, file)
   }
 
