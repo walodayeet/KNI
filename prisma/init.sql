@@ -5,13 +5,22 @@
 -- It's automatically executed when the PostgreSQL container starts
 
 -- Create database if it doesn't exist (handled by POSTGRES_DB env var)
--- CREATE DATABASE IF NOT EXISTS kni_db;
+-- Note: Database creation is handled by POSTGRES_DB environment variable
 
 -- Create user if it doesn't exist (handled by POSTGRES_USER env var)
--- CREATE USER IF NOT EXISTS kni_user WITH PASSWORD 'your_password';
+-- Note: User creation is handled by POSTGRES_USER environment variable
 
--- Grant privileges
--- GRANT ALL PRIVILEGES ON DATABASE kni_db TO kni_user;
+-- Grant additional privileges for schema operations
+-- These are needed for Prisma migrations and application operations
+GRANT ALL ON SCHEMA public TO kni_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO kni_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO kni_user;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO kni_user;
+
+-- Set default privileges for future objects
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO kni_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO kni_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO kni_user;
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
