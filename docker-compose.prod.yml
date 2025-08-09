@@ -95,6 +95,8 @@ services:
     restart: "no"
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-kni_user}
+      POSTGRES_DB: ${POSTGRES_DB:-kni_db}
     volumes:
       - ./backups:/backups
       - postgres_data:/var/lib/postgresql/data:ro
@@ -102,14 +104,36 @@ services:
       - kni-network
     command: >
       sh -c '
+        echo "Starting backup service with user: $$POSTGRES_USER, database: $$POSTGRES_DB"
+        # Validate environment variables
+        if [ -z "$$POSTGRES_USER" ] || [ -z "$$POSTGRES_DB" ] || [ -z "$$PGPASSWORD" ]; then
+          echo "ERROR: Missing required environment variables"
+          echo "POSTGRES_USER: $$POSTGRES_USER"
+          echo "POSTGRES_DB: $$POSTGRES_DB"
+          echo "PGPASSWORD: [set: $$([ -n "$$PGPASSWORD" ] && echo "yes" || echo "no")]"
+          exit 1
+        fi
+        # Wait for PostgreSQL to be ready
+        until pg_isready -h postgres -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"; do
+          echo "Waiting for PostgreSQL to be ready..."
+          sleep 5
+        done
+        echo "PostgreSQL is ready, starting backup loop"
         while true; do
-          pg_dump -h postgres -U ${POSTGRES_USER:-kni_user} -d ${POSTGRES_DB:-kni_db} > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+          echo "Creating backup at $$(date)"
+          pg_dump -h postgres -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+          if [ $$? -eq 0 ]; then
+            echo "Backup completed successfully"
+          else
+            echo "Backup failed with exit code $$?"
+          fi
           find /backups -name "backup_*.sql" -mtime +7 -delete
           sleep 86400
         done
       '
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
