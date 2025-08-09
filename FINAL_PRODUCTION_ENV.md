@@ -19,29 +19,29 @@ NEXT_PUBLIC_APP_NAME=KNI Platform
 NEXTAUTH_URL=https://kni.caukieuai.site
 NEXT_PUBLIC_APP_URL=https://kni.caukieuai.site
 
-# Database Configuration (CORRECTED)
-DATABASE_URL=postgresql://kni_user:Benkiller3686!@postgres:5432/kni_db
-DIRECT_URL=postgresql://kni_user:Benkiller3686!@postgres:5432/kni_db
+# Database Configuration (set passwords in Coolify envs)
+DATABASE_URL=postgresql://kni_user:${POSTGRES_PASSWORD}@postgres:5432/kni_db
+DIRECT_URL=postgresql://kni_user:${POSTGRES_PASSWORD}@postgres:5432/kni_db
 POSTGRES_DB=kni_db
 POSTGRES_USER=kni_user
-POSTGRES_PASSWORD=Benkiller3686!
+POSTGRES_PASSWORD=<SET_IN_COOLIFY>
 
-# Authentication & Security
-JWT_SECRET=NVUI5rF+8m5SsEeMLteJHwHl0d1dIEqotPfc7O0ilXk=
-NEXTAUTH_SECRET=e078cea9838a6cf4fcb30a27ca143944365bcf99ad7a498d7c18eee77e369e78
+# Authentication & Security (generate strong secrets in Coolify)
+JWT_SECRET=<SET_IN_COOLIFY_MIN_32_CHARS>
+NEXTAUTH_SECRET=<SET_IN_COOLIFY_MIN_32_CHARS>
 
-# Redis Configuration (CORRECTED)
-REDIS_URL=redis://:Benkiller3686!@redis:6379
-REDIS_PASSWORD=Benkiller3686!
+# Redis Configuration
+REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+REDIS_PASSWORD=<SET_IN_COOLIFY>
 
-# Email Configuration (UPDATED WITH YOUR DOMAIN)
+# Email Configuration
 EMAIL_FROM=noreply@kni.caukieuai.site
-SENDGRID_API_KEY=your_sendgrid_api_key_here
+SENDGRID_API_KEY=<SET_IN_COOLIFY>
 
-# File Storage (MinIO - Already Configured)
+# File Storage (MinIO)
 UPLOAD_PROVIDER=minio
-MINIO_ACCESS_KEY=sVYQYh46xR2xVOwqDlTz
-MINIO_SECRET_KEY=kovgFBqXET7atZ9cmW7VNEq7vmowgKlbqkm0k9lq
+MINIO_ACCESS_KEY=<SET_IN_COOLIFY>
+MINIO_SECRET_KEY=<SET_IN_COOLIFY>
 MINIO_BUCKET=kni
 MINIO_ENDPOINT=https://minio.caukieuai.com
 MINIO_USE_SSL=true
@@ -65,30 +65,30 @@ AWS_S3_SECRET_ACCESS_KEY=
 1. Go to [SendGrid](https://sendgrid.com/)
 2. Sign up for a free account
 3. Create an API key
-4. Replace `your_sendgrid_api_key_here` with your actual key
+4. Replace `<SET_IN_COOLIFY>` with your actual key in Coolify envs
 
 ## 🧪 Test Your Configuration
 
-Run this command to validate everything:
+Run this command to validate everything locally (use placeholders):
 
 ```bash
-# Set all environment variables and test
-$env:DATABASE_URL='postgresql://kni_user:Benkiller3686!@postgres:5432/kni_db'
-$env:DIRECT_URL='postgresql://kni_user:Benkiller3686!@postgres:5432/kni_db'
+# Example (do not commit real secrets)
+$env:DATABASE_URL='postgresql://kni_user:***@postgres:5432/kni_db'
+$env:DIRECT_URL='postgresql://kni_user:***@postgres:5432/kni_db'
 $env:POSTGRES_DB='kni_db'
 $env:POSTGRES_USER='kni_user'
-$env:POSTGRES_PASSWORD='Benkiller3686!'
-$env:JWT_SECRET='NVUI5rF+8m5SsEeMLteJHwHl0d1dIEqotPfc7O0ilXk='
-$env:NEXTAUTH_SECRET='e078cea9838a6cf4fcb30a27ca143944365bcf99ad7a498d7c18eee77e369e78'
+$env:POSTGRES_PASSWORD='***'
+$env:JWT_SECRET='***'
+$env:NEXTAUTH_SECRET='***'
 $env:NEXTAUTH_URL='https://kni.caukieuai.site'
 $env:NEXT_PUBLIC_APP_URL='https://kni.caukieuai.site'
 $env:NEXT_PUBLIC_APP_NAME='KNI Platform'
-$env:REDIS_URL='redis://:Benkiller3686!@redis:6379'
-$env:REDIS_PASSWORD='Benkiller3686!'
+$env:REDIS_URL='redis://:***@redis:6379'
+$env:REDIS_PASSWORD='***'
 $env:EMAIL_FROM='noreply@kni.caukieuai.site'
-$env:SENDGRID_API_KEY='your_actual_sendgrid_key'
-$env:MINIO_ACCESS_KEY='sVYQYh46xR2xVOwqDlTz'
-$env:MINIO_SECRET_KEY='kovgFBqXET7atZ9cmW7VNEq7vmowgKlbqkm0k9lq'
+$env:SENDGRID_API_KEY='***'
+$env:MINIO_ACCESS_KEY='***'
+$env:MINIO_SECRET_KEY='***'
 $env:MINIO_BUCKET='kni'
 $env:MINIO_ENDPOINT='https://minio.caukieuai.com'
 $env:MINIO_USE_SSL='true'
@@ -98,7 +98,7 @@ npm run validate:prod
 
 ## 🚀 Deploy to Production
 
-Once you have the SendGrid API key:
+Once your secrets are set in Coolify:
 
 ```bash
 # Deploy with production configuration
@@ -113,12 +113,11 @@ npm run docker:prod:logs
 ## 📋 Deployment Checklist
 
 - [x] Domain configured: `https://kni.caukieuai.site`
-- [x] Database URLs corrected
-- [x] Redis URL corrected
+- [x] Database URLs use service name `postgres`
+- [x] Redis URL uses service name `redis`
 - [x] Email from address set
 - [x] MinIO configuration ready
-- [x] Strong secrets configured
-- [ ] **Get SendGrid API key** (only remaining step)
+- [x] Strong secrets configured in Coolify
 - [ ] Set environment variables in your deployment platform
 - [ ] Run validation: `npm run validate:prod`
 - [ ] Deploy: `npm run docker:prod:up`
@@ -126,18 +125,12 @@ npm run docker:prod:logs
 
 ## 🔒 Security Notes
 
-✅ **All Good:**
-
-- HTTPS domain configured
-- Strong JWT and NextAuth secrets
-- Secure database password
-- MinIO using SSL
-- Email domain matches app domain
+✅ Do not commit secrets; set them in Coolify only. ✅ Use HTTPS domain. ✅ Use
+strong JWT and NextAuth secrets. ✅ MinIO over SSL.
 
 ## 🎉 Ready for Production!
 
-Your configuration is now complete and production-ready. Just get that SendGrid
-API key and you're all set to deploy!
+Your configuration is ready. Set secrets in Coolify and deploy!
 
 ---
 
