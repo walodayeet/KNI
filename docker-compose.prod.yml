@@ -55,18 +55,16 @@ services:
     container_name: kni-platform-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-kni_db}
-      POSTGRES_USER: ${POSTGRES_USER:-kni_user}
+      POSTGRES_DB: kni_db
+      POSTGRES_USER: kni_user
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./prisma/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - kni-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kni_user} -d ${POSTGRES_DB:-kni_db}"]
+      test: ["CMD-SHELL", "pg_isready -U kni_user -d kni_db"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -95,8 +93,8 @@ services:
     restart: "no"
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_USER: ${POSTGRES_USER:-kni_user}
-      POSTGRES_DB: ${POSTGRES_DB:-kni_db}
+      POSTGRES_USER: kni_user
+      POSTGRES_DB: kni_db
     volumes:
       - ./backups:/backups
       - postgres_data:/var/lib/postgresql/data:ro

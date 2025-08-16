@@ -131,15 +131,6 @@ deployment:
   max_surge: 1
   timeout: 600
 
-# Pre-deployment Commands
-pre_deploy:
-  - "npx prisma migrate deploy"
-  - "npx prisma generate"
-
-# Post-deployment Commands
-post_deploy:
-  - "npm run db:seed"
-
 # Resource Limits
 resources:
   app:
